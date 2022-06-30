@@ -1,0 +1,135 @@
+package org.yamabuki.bdgallery
+
+import android.annotation.SuppressLint
+import android.os.Bundle
+import android.view.WindowInsets.Type.navigationBars
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.compose.foundation.layout.*
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Scaffold
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.LayoutDirection
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat.Type.navigationBars
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavGraph.Companion.findStartDestination
+import androidx.navigation.compose.NavHost
+import androidx.navigation.compose.composable
+import androidx.navigation.compose.currentBackStackEntryAsState
+import androidx.navigation.compose.rememberNavController
+import org.yamabuki.bdgallery.components.BangNavBar
+import org.yamabuki.bdgallery.screens.Favorite.FavoriteScreen
+import org.yamabuki.bdgallery.screens.Gallery.GalleryScreen
+import org.yamabuki.bdgallery.screens.Home.HomeScreen
+import org.yamabuki.bdgallery.screens.Home.HomeViewModel
+import org.yamabuki.bdgallery.screens.Stickers.StickersScreen
+import org.yamabuki.bdgallery.ui.theme.BangDreamGalleryTheme
+
+
+class MainActivity : ComponentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        super.onCreate(savedInstanceState)
+        // 設置窗口能鋪滿整個屏幕包括狀態欄和導航欄，網上抄的
+        // https://google.github.io/accompanist/insets/
+        // https://blog.msomu.dev/behind-status-bar-with-jetpack-compose
+        WindowCompat.setDecorFitsSystemWindows(window, false)
+
+        setContent {
+            BangApp()
+        }
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun BangApp() {
+    var showNavBar by rememberSaveable { mutableStateOf(true) }
+    BangDreamGalleryTheme {
+        //不要問這裏的代碼是怎麽來的，因爲都是抄的
+        val allScreens = BangAppScreen.values().toList()
+        val navController = rememberNavController()
+        val backstackEntry = navController.currentBackStackEntryAsState()
+        val currentScreen = BangAppScreen.fromRoute(backstackEntry.value?.destination?.route)
+
+
+        //不要問 Scaffold 是什麽，我也不懂
+        Scaffold(
+            // 設置這個元素能鋪滿整個屏幕包括狀態欄和導航欄，網上抄的
+            modifier = Modifier.fillMaxSize(),
+            bottomBar = {
+                BangNavBar(
+                    allScreens = allScreens,
+                    currentScreen = currentScreen,
+                    onTabSelected = { screen ->
+                        if (screen != currentScreen)
+                            navController.navigate(screen.name){
+                                // 很神奇，加了下面幾行代碼以後，在屏幕之間導航不會丟掉已有的 viewModel
+                                // Pop up to the start destination of the graph to
+                                // avoid building up a large stack of destinations
+                                // on the back stack as users select items
+                                popUpTo(navController.graph.findStartDestination().id) {
+                                    saveState = true
+                                }
+                                // Avoid multiple copies of the same destination when
+                                // reselecting the same item
+                                launchSingleTop = true
+                                // Restore state when reselecting a previously selected item
+                                restoreState = true
+                            }
+                    },
+                    showHide = showNavBar
+                )
+            },
+        ) { innerPadding ->
+            NavHost(
+                navController = navController,
+                startDestination = BangAppScreen.Home.name,
+//                modifier = Modifier.padding(
+//                    top = innerPadding.calculateTopPadding(),
+//                    start = innerPadding.calculateLeftPadding(LayoutDirection.Ltr),
+//                    end = innerPadding.calculateRightPadding(LayoutDirection.Ltr)
+//                )
+                modifier = Modifier.windowInsetsPadding(
+                    WindowInsets.navigationBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
+                )
+            ) {
+                composable(BangAppScreen.Home.name) {
+                    val viewModel: HomeViewModel = viewModel()
+                    HomeScreen(
+                        { showNavBar = !showNavBar },
+                        viewModel = viewModel
+                    )
+                }
+                composable(BangAppScreen.Gallery.name) {
+                    GalleryScreen(
+                        { showNavBar = it }
+                    )
+                }
+                composable(BangAppScreen.Favorite.name) {
+                    FavoriteScreen()
+                }
+                composable(BangAppScreen.Stickers.name) {
+                    StickersScreen()
+                }
+
+                //TODO: 貼紙界面？
+            }
+        }
+    }
+}
+
+
+@Preview(showBackground = true)
+@Composable
+fun DefaultPreview() {
+    BangDreamGalleryTheme {
+        BangApp()
+    }
+}
