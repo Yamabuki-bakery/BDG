@@ -50,6 +50,7 @@ fun HomeScreen(
     }
     LaunchedEffect(Unit) {
         viewModel.countAllCards()
+        viewModel.countAllManga()
     }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
@@ -61,7 +62,9 @@ fun HomeScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {
-            Text(text = viewModel.text)
+            Text(text = "Card count: ${viewModel.cardCount}")
+            Spacer(modifier = Modifier.padding(8.dp))
+            Text(text = "Manga count: ${viewModel.mangaCount}")
             Spacer(modifier = Modifier.padding(8.dp))
             Text(text = viewModel.state.name)
             Spacer(modifier = Modifier.padding(8.dp))

@@ -15,6 +15,9 @@ private val retrofit = Retrofit.Builder().addConverterFactory(ScalarsConverterFa
 interface DoriServices {
     @GET("/api/cards/all.5.json")
     suspend fun getCards(): String
+
+    @GET("/api/comics/all.5.json")
+    suspend fun getAllManga(): String
 }
 
 object Dori {

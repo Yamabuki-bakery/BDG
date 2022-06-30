@@ -12,18 +12,26 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.yamabuki.bdgallery.dataLayer.card.impl.MyCardRepo
 import org.yamabuki.bdgallery.dataLayer.database.MainDB
+import org.yamabuki.bdgallery.dataLayer.manga.impl.MyMangaRepo
 
 class HomeViewModel(
     application: Application
 ) : AndroidViewModel(application) {
-    private var _count by mutableStateOf(0)
+    private var _cardCount by mutableStateOf(-1)
+    private var _mangaCount by mutableStateOf(-1)
     private var _state by mutableStateOf(HomeState.UNKNOWN)
     private val myCardRepo: MyCardRepo = MyCardRepo()
+    private val myMangaRepo = MyMangaRepo()
     private val cardDao = MainDB.getDB(getApplication()).cardDao()
+    private val mangaDao = MainDB.getDB(getApplication()).mangaDao()
 
-    val text: String
+    val cardCount: Int
         get() {
-            return "DB Count $_count"
+            return _cardCount
+        }
+    val mangaCount: Int
+        get() {
+            return _mangaCount
         }
 
     val state: HomeState
@@ -36,8 +44,10 @@ class HomeViewModel(
         viewModelScope.launch {
             //val cardDao = MainDB.getDB(getApplication()).cardDao()
             val result = myCardRepo.loadAllCards(cardDao)
-            if (result.isSuccess){
-                _count =  result.getOrThrow().size
+            val result2 = myMangaRepo.loadAllManga(mangaDao)
+            if (result.isSuccess and result2.isSuccess){
+                _cardCount = result.getOrThrow().size
+                _mangaCount = result2.getOrThrow().size
                 _state = HomeState.SUCCESS
             }else{
                 _state = HomeState.FAILED
@@ -48,12 +58,20 @@ class HomeViewModel(
         viewModelScope.launch {
             //val cardDao = MainDB.getDB(getApplication()).cardDao()
             myCardRepo.delAllCards(cardDao)
+            myMangaRepo.delAllManga(mangaDao)
         }
     }
     fun countAllCards() {
         viewModelScope.launch {
             cardDao.getCardCount().collect(){
-                _count = it
+                _cardCount = it
+            }
+        }
+    }
+    fun countAllManga() {
+        viewModelScope.launch {
+            mangaDao.getMangaCount().collect(){
+                _mangaCount = it
             }
         }
     }

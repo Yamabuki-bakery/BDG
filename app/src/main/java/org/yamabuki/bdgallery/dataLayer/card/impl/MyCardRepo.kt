@@ -10,7 +10,7 @@ import org.yamabuki.bdgallery.dataLayer.card.CardRepo
 import org.yamabuki.bdgallery.dataLayer.database.CardDao
 import org.yamabuki.bdgallery.dataLayer.retrofit.Dori
 import org.yamabuki.bdgallery.dataType.Card
-import org.yamabuki.bdgallery.dataType.CardArea
+import org.yamabuki.bdgallery.dataType.ServerArea
 import org.yamabuki.bdgallery.dataType.CardAttr
 import org.yamabuki.bdgallery.dataType.Member
 
@@ -53,7 +53,7 @@ private fun cardJsonParse(jsonStr: String): List<Card> {
             }
         }
         val member: Member =
-            Member.fromIndex(j2.getInt("characterId") - 1) // member enum start by 0
+            Member.fromId(j2.getInt("characterId")) // member enum start by 0
         val (areaCode, title) = getFirstNonNullStr(j2.getJSONArray("prefix"))
         val star: Int = j2.getInt("rarity")
         val (_, releasedAtStr) = getFirstNonNullStr(j2.getJSONArray("releasedAt"))
@@ -74,7 +74,7 @@ private fun cardJsonParse(jsonStr: String): List<Card> {
         }
         val newCard = Card(
             id.toInt(), title, attr, member, star, releaseAt,
-            resSet, imgNormal, imgTrained, CardArea.fromIndex(areaCode)
+            resSet, imgNormal, imgTrained, ServerArea.fromIndex(areaCode)
         )
         cardArray.add(newCard)
     }
