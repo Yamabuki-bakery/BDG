@@ -7,15 +7,15 @@ import org.yamabuki.bdgallery.dataType.CardAttr
 import org.yamabuki.bdgallery.dataType.Member
 
 class Converters {
-    @TypeConverter
-    fun fromMemberToInt(value: Member): Int {
-        return value.id
-    }
-
-    @TypeConverter
-    fun fromIntToMember(index: Int): Member {
-        return Member.fromId(index)
-    }
+//    @TypeConverter
+//    fun fromMemberToInt(value: Member): Int {
+//        return value.id
+//    }
+//
+//    @TypeConverter
+//    fun fromIntToMember(index: Int): Member {
+//        return Member.fromId(index)
+//    }
 
     @TypeConverter
     fun fromAttrToInt(value: CardAttr): Int {
@@ -81,6 +81,18 @@ class Converters {
             if (flag and area.flag != 0) result.add(area)
         }
         return result
+    }
+
+    @TypeConverter
+    fun fromNullableMemberToInt(value: Member?): Int {
+        if (value != null)return value.id
+        return 0
+    }
+
+    @TypeConverter
+    fun fromIntToNullableMember(index: Int): Member? {
+        if (index != 0) return Member.fromId(index)
+        return null
     }
 
 }

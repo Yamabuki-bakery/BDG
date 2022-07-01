@@ -59,6 +59,20 @@ data class Manga(
     }
 }
 
+@Entity
+data class Sticker(
+    @PrimaryKey val fileName: String,
+    val character: Member? = null,
+    var areaAvailability: MutableList<ServerArea> = mutableListOf(),
+){
+    fun getImgUrl(serverArea: ServerArea): String{
+        if (serverArea !in this.areaAvailability)
+            throw IllegalArgumentException("[StickerGetImgUrl] 地區代碼過於惡俗！")
+        val imgURL2 = "/assets/${serverArea.lower}/stamp/01_rip/${this.fileName}"
+        return imgURL2
+    }
+}
+
 enum class CardAttr(val index: Int){
     POWERFUL(0),
     COOL(1),

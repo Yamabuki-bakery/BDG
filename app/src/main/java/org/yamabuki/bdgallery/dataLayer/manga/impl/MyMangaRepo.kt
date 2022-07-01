@@ -2,6 +2,7 @@ package org.yamabuki.bdgallery.dataLayer.manga.impl
 
 import android.util.Log
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
 import kotlinx.coroutines.withContext
 import org.json.JSONArray
 import org.json.JSONException
@@ -15,9 +16,10 @@ import org.yamabuki.bdgallery.dataType.ServerArea
 
 class MyMangaRepo : MangaRepo{
     override suspend fun loadAllManga(mangaDao: MangaDao): Result<List<Manga>> {
-        return withContext(Dispatchers.IO) {
+        return withContext (Dispatchers.IO) {
             try {
-                val jsonStr = Dori.retrofitService.getAllManga()
+                val deferred = async (Dispatchers.IO){ Dori.mService.getAllManga() }
+                val jsonStr = deferred.await()
                 val mangaList = jsonParse(jsonStr)
                 mangaDao.insertAll(mangaList)
                 Result.success(mangaList)

@@ -19,7 +19,7 @@ class MyCardRepo : CardRepo {
         //val card = Card(1, "test", CardAttr.PURE, Member.SAYA,4, Date(0))
         return withContext(Dispatchers.IO) {
             try {
-                val jsonStr = Dori.retrofitService.getCards()
+                val jsonStr = Dori.mService.getCards()
                 val cardList = cardJsonParse(jsonStr)
                 cardDao.insertAll(cardList)
                 Result.success(cardList)

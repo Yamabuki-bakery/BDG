@@ -5,4 +5,5 @@
     <string name="screen_title_favorite">FAVORITE</string>
     <string name="screen_title_stickers">STICKERS</string>
     <string name="screen_title_settings">SETTINGS</string>
+    <string name="dori_webroot" translatable="false">https://bestdori.com</string>
 </resources>
