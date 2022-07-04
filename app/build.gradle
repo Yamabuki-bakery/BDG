@@ -9,7 +9,7 @@ android {
 
     defaultConfig {
         applicationId "org.yamabuki.bdgallery"
-        minSdk 23
+        minSdk 28
         targetSdk 32
         versionCode 3
         versionName "3.0"
