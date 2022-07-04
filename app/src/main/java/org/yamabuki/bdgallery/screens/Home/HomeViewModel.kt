@@ -1,28 +1,39 @@
 package org.yamabuki.bdgallery.screens.Home
 
 import android.app.Application
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
+import androidx.compose.runtime.*
 import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.accompanist.systemuicontroller.rememberSystemUiController
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.launch
 import org.yamabuki.bdgallery.dataLayer.card.impl.MyCardRepo
 import org.yamabuki.bdgallery.dataLayer.database.MainDB
 import org.yamabuki.bdgallery.dataLayer.manga.impl.MyMangaRepo
 import org.yamabuki.bdgallery.dataLayer.sticker.impl.MyStickerRepo
+import java.time.LocalDateTime
+
+//import java.util.*
 
 class HomeViewModel(
     application: Application
 ) : AndroidViewModel(application) {
+    // UI State
     private var _cardCount by mutableStateOf(-1)
     private var _mangaCount by mutableStateOf(-1)
     private var _stickerCount by mutableStateOf(-1)
     private var _state by mutableStateOf(HomeState.UNKNOWN)
+    private var _appUpdate by mutableStateOf(false)
+    private var _lastUpdateTime by mutableStateOf(LocalDateTime.now())
+    private val _cardCountByStar = arrayListOf(-1, -1, -1, -1).toMutableStateList()
+
+    val cardCount: Int get() = _cardCount
+    val mangaCount: Int get() = _mangaCount
+    val stickerCount: Int get() = _stickerCount
+    val state: HomeState get() = _state
+    val appUpdate: Boolean get() = _appUpdate
+    val lastUpdateTime: LocalDateTime get() = _lastUpdateTime
+    val cardCountByStar: List<Int> get() = _cardCountByStar
+
+
     private val myCardRepo: MyCardRepo = MyCardRepo()
     private val myMangaRepo = MyMangaRepo()
     private val myStickerRepo = MyStickerRepo()
@@ -30,42 +41,32 @@ class HomeViewModel(
     private val mangaDao = MainDB.getDB(getApplication()).mangaDao()
     private val stickerDao = MainDB.getDB(getApplication()).stickerDao()
 
-    val cardCount: Int
-        get() {
-            return _cardCount
-        }
-    val mangaCount: Int
-        get() {
-            return _mangaCount
-        }
-    val stickerCount: Int
-        get() {
-            return _stickerCount
-        }
 
-    val state: HomeState
-        get() {
-            return _state
-        }
+    fun init() {
+        countAllCards()
+        countAllManga()
+        countAllStickers()
+    }
 
-    fun refresh(){
+    fun refresh() {
         _state = HomeState.LOADING
         viewModelScope.launch {
             //val cardDao = MainDB.getDB(getApplication()).cardDao()
             val result = myCardRepo.loadAllCards(cardDao)
             val result2 = myMangaRepo.loadAllManga(mangaDao)
             val result3 = myStickerRepo.loadAllStickers(stickerDao)
-            if (result.isSuccess and result2.isSuccess and result3.isSuccess){
+            if (result.isSuccess and result2.isSuccess and result3.isSuccess) {
                 _cardCount = result.getOrThrow().size
                 _mangaCount = result2.getOrThrow().size
                 _stickerCount = result3.getOrThrow().size
                 _state = HomeState.SUCCESS
-            }else{
+            } else {
                 _state = HomeState.FAILED
             }
         }
     }
-    fun clear(){
+
+    fun clear() {
         viewModelScope.launch {
             //val cardDao = MainDB.getDB(getApplication()).cardDao()
             myCardRepo.delAllCards(cardDao)
@@ -73,30 +74,41 @@ class HomeViewModel(
             myStickerRepo.delAllStickers(stickerDao)
         }
     }
+
     fun countAllCards() {
+        for (i in 0 until 4) {
+            viewModelScope.launch {
+                cardDao.getCardCountByStar(i + 1).collect {
+                    _cardCountByStar[i] = it
+                }
+            }
+        }
         viewModelScope.launch {
-            cardDao.getCardCount().collect(){
+            cardDao.getCardCount().collect {
                 _cardCount = it
             }
         }
     }
+
     fun countAllManga() {
         viewModelScope.launch {
-            mangaDao.getMangaCount().collect(){
+            mangaDao.getMangaCount().collect() {
                 _mangaCount = it
             }
         }
     }
+
     fun countAllStickers() {
         viewModelScope.launch {
-            stickerDao.getStickerCount().collect(){
+            stickerDao.getStickerCount().collect() {
                 _stickerCount = it
             }
         }
     }
 }
 
-enum class HomeState(){
+
+enum class HomeState() {
     LOADING,
     SUCCESS,
     FAILED,

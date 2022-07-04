@@ -15,4 +15,7 @@ interface CardDao {
     @Query("SELECT COUNT(*) FROM card")
     fun getCardCount(): Flow<Int>
 
+    @Query("SELECT COUNT(*) FROM card WHERE star = :star")
+    fun getCardCountByStar(star: Int): Flow<Int>
+
 }
