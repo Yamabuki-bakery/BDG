@@ -15,6 +15,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import org.yamabuki.bdgallery.BangAppScreen
 
@@ -26,7 +27,7 @@ fun BangNavBar(
     currentScreen: BangAppScreen,
     onTabSelected: (BangAppScreen) -> Unit,
     showHide: Boolean,
-    ){
+) {
     //val density = LocalDensity.current
 
     AnimatedVisibility(
@@ -47,18 +48,18 @@ fun BangNavBar(
             ),
             targetOffsetY = { it * 2 }
         )
-
     ) {
         Surface(
             color = MaterialTheme.colorScheme.surface,
-            tonalElevation = 5.0.dp,  // 不把這個設成和 Navigation Bar 一樣的話，顔色就會有微妙的差異，我 tm
-        // 我日，設完也有微妙的差異，直接把下面那個設成透明，我佛了
+            tonalElevation = 5.0.dp,
+            // 不把這個設成和 Navigation Bar 一樣的話，顔色就會有微妙的差異，我 tm
+            // 我日，設完也有微妙的差異，直接把下面那個設成透明，我佛了
             shadowElevation = 15.0.dp
         ) {
             NavigationBar(
                 modifier = Modifier.windowInsetsPadding(
                     // 這個 modifier 是從 nowinandroid 抄來的，能直接計算系統欄的高度，感恩
-                    WindowInsets.safeDrawing.only(
+                    WindowInsets.navigationBars.only( // 或者 safe drawing？
                         WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
                     ),
                 ),
@@ -67,7 +68,12 @@ fun BangNavBar(
                 allScreens.forEachIndexed { index, screen ->
                     NavigationBarItem(
                         //icon = { Icon(imageVector = screen.icon, contentDescription = screen.name) },
-                        icon = { Icon(painter =  painterResource(id = screen.icon), contentDescription = screen.name) },
+                        icon = {
+                            Icon(
+                                painter = painterResource(id = screen.icon),
+                                contentDescription = screen.name
+                            )
+                        },
                         label = { Text(text = screen.name) },
                         selected = currentScreen == screen,
                         onClick = { onTabSelected(screen) },

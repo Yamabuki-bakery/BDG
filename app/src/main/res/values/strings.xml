@@ -6,4 +6,6 @@
     <string name="screen_title_stickers">STICKERS</string>
     <string name="screen_title_settings">SETTINGS</string>
     <string name="dori_webroot" translatable="false">https://bestdori.com</string>
+    <string name="app_sharedpref_key" translatable="false">org.yamabuki.bdgallery</string>
+    <string name="spkey_lastrefreshtime" translatable="false">spkey_lastrefreshtime</string>
 </resources>

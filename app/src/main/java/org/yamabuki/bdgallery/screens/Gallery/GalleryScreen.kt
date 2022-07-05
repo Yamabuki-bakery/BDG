@@ -4,8 +4,7 @@ import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
@@ -33,6 +32,7 @@ fun GalleryScreen(
     val statusBarColor = TopAppBarDefaults.centerAlignedTopAppBarColors()
         .containerColor(scrollFraction = scrollBehavior.scrollFraction).value
 
+
     SideEffect {
         systemUiController.setSystemBarsColor(Color.Transparent, statusBarColor.luminance() > 0.5)
         //systemUiController.setStatusBarColor(statusBarColor)
@@ -54,7 +54,10 @@ fun GalleryScreen(
         }
     ) { innerPadding ->
         LazyColumn(
-            contentPadding = innerPadding,
+            contentPadding = PaddingValues(
+                top = innerPadding.calculateTopPadding(),
+                bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
+            ),
             verticalArrangement = Arrangement.SpaceAround
         ) {
             items(100) { count ->

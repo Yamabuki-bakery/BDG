@@ -1,15 +1,21 @@
 package org.yamabuki.bdgallery.screens.Home
 
 import android.app.Application
-import androidx.compose.runtime.*
+import android.content.Context
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.launch
+import org.yamabuki.bdgallery.R
 import org.yamabuki.bdgallery.dataLayer.card.impl.MyCardRepo
 import org.yamabuki.bdgallery.dataLayer.database.MainDB
 import org.yamabuki.bdgallery.dataLayer.manga.impl.MyMangaRepo
 import org.yamabuki.bdgallery.dataLayer.sticker.impl.MyStickerRepo
 import java.time.LocalDateTime
+import java.time.ZoneOffset
 
 //import java.util.*
 
@@ -33,19 +39,23 @@ class HomeViewModel(
     val lastUpdateTime: LocalDateTime get() = _lastUpdateTime
     val cardCountByStar: List<Int> get() = _cardCountByStar
 
-
+    private val app = application
     private val myCardRepo: MyCardRepo = MyCardRepo()
     private val myMangaRepo = MyMangaRepo()
     private val myStickerRepo = MyStickerRepo()
     private val cardDao = MainDB.getDB(getApplication()).cardDao()
     private val mangaDao = MainDB.getDB(getApplication()).mangaDao()
     private val stickerDao = MainDB.getDB(getApplication()).stickerDao()
-
+    private val sharedPref = application.getSharedPreferences(application.getString(R.string.app_sharedpref_key), Context.MODE_PRIVATE)
+    private val spEditor = sharedPref.edit()
 
     fun init() {
         countAllCards()
         countAllManga()
         countAllStickers()
+        viewModelScope.launch {
+            _lastUpdateTime = LocalDateTime.ofEpochSecond(sharedPref.getLong(app.getString(R.string.spkey_lastrefreshtime), 0), 0, ZoneOffset.UTC)
+        }
     }
 
     fun refresh() {
@@ -60,6 +70,10 @@ class HomeViewModel(
                 _mangaCount = result2.getOrThrow().size
                 _stickerCount = result3.getOrThrow().size
                 _state = HomeState.SUCCESS
+                spEditor.putLong(app.getString(R.string.spkey_lastrefreshtime),
+                    LocalDateTime.now().toEpochSecond(ZoneOffset.UTC))
+                spEditor.commit()
+                _lastUpdateTime = LocalDateTime.now()
             } else {
                 _state = HomeState.FAILED
             }

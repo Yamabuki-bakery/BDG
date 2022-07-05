@@ -39,6 +39,8 @@ class MainActivity : ComponentActivity() {
         // 設置窗口能鋪滿整個屏幕包括狀態欄和導航欄，網上抄的
         // https://google.github.io/accompanist/insets/
         // https://blog.msomu.dev/behind-status-bar-with-jetpack-compose
+        // https://medium.com/mobile-app-development-publication/android-jetpack-compose-inset-padding-made-easy-5f156a790979
+        // https://www.youtube.com/watch?v=_mGDMVRO3iE
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         setContent {
@@ -87,18 +89,22 @@ fun BangApp() {
                     showHide = showNavBar
                 )
             },
-        ) { innerPadding ->
+        ) { innerPadding ->  // 這個值將會給出 scaffold 内以參數傳遞進去的 top app bar 和 bottom bar 的 size
             NavHost(
                 navController = navController,
                 startDestination = BangAppScreen.Home.name,
 //                modifier = Modifier.padding(
 //                    top = innerPadding.calculateTopPadding(),
 //                    start = innerPadding.calculateLeftPadding(LayoutDirection.Ltr),
-//                    end = innerPadding.calculateRightPadding(LayoutDirection.Ltr)
+//                    end = innerPadding.calculateRightPadding(LayoutDirection.Ltr),
+//                    // bottom 不需要 padding 一個 bottom bar， 使得元素可以在 bottom bar 後面繪製
 //                )
-                modifier = Modifier.windowInsetsPadding(
-                    WindowInsets.navigationBars.only(WindowInsetsSides.Top + WindowInsetsSides.Horizontal)
-                )
+//                modifier = Modifier.windowInsetsPadding(
+//                    // 因爲 top app bar 由各個 screen 所管理，所以不需要進行 top padding，
+//                    // 并且，bottom bar 對 navigation bar 的 padding 由 bottom bar 自身直接計算。
+//                    // 不過這樣會導致屏幕顯示内容和底部 navigation bar 相重叠，需要另設 content padding。
+//                    WindowInsets.navigationBars.only(WindowInsetsSides.Horizontal)
+//                )
             ) {
                 composable(BangAppScreen.Home.name) {
                     val viewModel: HomeViewModel = viewModel()

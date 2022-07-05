@@ -28,6 +28,7 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.components.BangAppBar
 import androidx.lifecycle.viewmodel.compose.viewModel
+import java.time.format.DateTimeFormatter
 
 
 val currentScreen = BangAppScreen.Home
@@ -61,6 +62,7 @@ fun HomeScreen(
     }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+                // 底部 padding 從 activity 拿到的 bottom bar 高度
             .padding(bottom = fatherInnerPadding.calculateBottomPadding()),
         topBar = {
             HomeAppbar(
@@ -69,14 +71,15 @@ fun HomeScreen(
             )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier
+        Column(
+            modifier = Modifier
             .padding(innerPadding)
-            .verticalScroll(scrollState)
+            .verticalScroll(scrollState),
         ) {
             HomeCard(elevated = true) {
-                Text(text = "TEST 1\nTEST 1\nTEST 1\nTEST 1\nTEST 1\n")
+                Text(text = "Last Update:")
                 Spacer(modifier = Modifier.padding(8.dp))
-                Text(text = "Card count: ${viewModel.cardCount}")
+                Text(text = viewModel.lastUpdateTime.format(DateTimeFormatter.ISO_LOCAL_DATE_TIME))
             }
 
             if (viewModel.appUpdate){
@@ -131,6 +134,7 @@ fun HomeScreen(
                     Text(text = "Clear")
                 }
             }
+            Spacer(modifier = Modifier.navigationBarsPadding())  // 防止和底部導航欄重叠
         }
     }
 }

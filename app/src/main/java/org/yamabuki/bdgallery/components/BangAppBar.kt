@@ -18,6 +18,7 @@ fun BangAppBar(
     navigationIcon: @Composable () -> Unit = {},
     actions: @Composable RowScope.() -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior? = null,
+    statusBarTransparent: Boolean = false,
 ) {
     val allScreens = BangAppScreen.values().toList()
     //加入一個 Surface 來承擔頂欄的底色，并且頂欄 container 背景色已經設置為透明
