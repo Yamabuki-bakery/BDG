@@ -58,7 +58,7 @@ fun HomeScreen(
         //systemUiController.setStatusBarColor(  statusBarColor)
     }
     LaunchedEffect(Unit) {
-        viewModel.init()
+        //viewModel.init()
     }
     Scaffold(
         modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)

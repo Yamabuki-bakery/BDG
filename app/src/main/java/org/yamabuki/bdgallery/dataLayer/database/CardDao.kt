@@ -6,7 +6,7 @@ import org.yamabuki.bdgallery.dataType.Card
 
 @Dao
 interface CardDao {
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
+    @Insert(onConflict = OnConflictStrategy.REPLACE)
     fun insertAll(cards:List<Card>)
 
     @Query("DELETE FROM card")
@@ -18,4 +18,6 @@ interface CardDao {
     @Query("SELECT COUNT(*) FROM card WHERE star = :star")
     fun getCardCountByStar(star: Int): Flow<Int>
 
+    @Query("SELECT * FROM card ORDER BY releasedAt DESC, id DESC")
+    fun getAllCards(): Flow<List<Card>>
 }

@@ -8,4 +8,5 @@
     <string name="dori_webroot" translatable="false">https://bestdori.com</string>
     <string name="app_sharedpref_key" translatable="false">org.yamabuki.bdgallery</string>
     <string name="spkey_lastrefreshtime" translatable="false">spkey_lastrefreshtime</string>
+    <string name="spkey_galleryLayout" translatable="false">spkey_galleryLayout</string>
 </resources>

@@ -49,14 +49,15 @@ class HomeViewModel(
     private val sharedPref = application.getSharedPreferences(application.getString(R.string.app_sharedpref_key), Context.MODE_PRIVATE)
     private val spEditor = sharedPref.edit()
 
-    fun init() {
+    init {
         countAllCards()
         countAllManga()
         countAllStickers()
-        viewModelScope.launch {
+       // viewModelScope.launch {
             _lastUpdateTime = LocalDateTime.ofEpochSecond(sharedPref.getLong(app.getString(R.string.spkey_lastrefreshtime), 0), 0, ZoneOffset.UTC)
-        }
+      //  }
     }
+
 
     fun refresh() {
         _state = HomeState.LOADING

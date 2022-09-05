@@ -57,7 +57,8 @@ private fun cardJsonParse(jsonStr: String): List<Card> {
         val (areaCode, title) = getFirstNonNullStr(j2.getJSONArray("prefix"))
         val star: Int = j2.getInt("rarity")
         val (_, releasedAtStr) = getFirstNonNullStr(j2.getJSONArray("releasedAt"))
-        val releaseAt = releasedAtStr.toLong()
+        var releaseAt = releasedAtStr.toLong()
+        if(releaseAt > 4000000000000) releaseAt = 0
         val type: String = j2.getString("type")
         val resSet = j2.getString("resourceSetName")
         var imgNormal: Boolean = false;

@@ -27,6 +27,7 @@ import androidx.navigation.compose.rememberNavController
 import org.yamabuki.bdgallery.components.BangNavBar
 import org.yamabuki.bdgallery.screens.Favorite.FavoriteScreen
 import org.yamabuki.bdgallery.screens.Gallery.GalleryScreen
+import org.yamabuki.bdgallery.screens.Gallery.GalleryViewModel
 import org.yamabuki.bdgallery.screens.Home.HomeScreen
 import org.yamabuki.bdgallery.screens.Home.HomeViewModel
 import org.yamabuki.bdgallery.screens.Stickers.StickersScreen
@@ -115,8 +116,11 @@ fun BangApp() {
                     )
                 }
                 composable(BangAppScreen.Gallery.name) {
+                    val viewModel: GalleryViewModel = viewModel()
                     GalleryScreen(
-                        { showNavBar = it }
+                        { showNavBar = it },
+                        viewModel,
+                        innerPadding
                     )
                 }
                 composable(BangAppScreen.Favorite.name) {
