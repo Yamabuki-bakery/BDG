@@ -19,6 +19,9 @@ import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.components.BangAppBar
 import org.yamabuki.bdgallery.dataType.Card
+import org.yamabuki.bdgallery.ugly.MyColorScheme
+import org.yamabuki.bdgallery.ui.theme.BangDreamGalleryTheme
+import org.yamabuki.bdgallery.ui.theme.myColors
 
 val currentScreen = BangAppScreen.Gallery
 
@@ -99,16 +102,39 @@ private fun LazyGrid(
     }
 }
 
+
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LargeImageLazyList(
     cards: List<Card>,
-    contentPadding: PaddingValues
+    contentPadding: PaddingValues,
+    getStateObj: (Card) -> Unit,
+    onCardClick: () -> Unit
 ){
+
     LazyColumn(
         contentPadding = contentPadding,
         verticalArrangement = Arrangement.SpaceAround
     ){
-        item { Text(text = "Large Image, 還沒寫好捏") }
+        items(
+            cards,
+            key = { it.id },
+            contentType = { Card::javaClass }
+        ){
+            val stateObj = getStateObj(it)
+            androidx.compose.material3.Card(
+                onClick = { onCardClick() },
+                modifier = Modifier.aspectRatio((4.0/3.0).toFloat()),
+            ) {
+                Surface(
+                    color = MaterialTheme.myColors.lightPure
+                // todo: change colors based on card attribute
+                ) {
+
+                }
+            }
+        }
     }
 }
 

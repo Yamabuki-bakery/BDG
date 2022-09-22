@@ -2,6 +2,7 @@ package org.yamabuki.bdgallery.screens.Gallery
 
 import android.app.Application
 import android.content.Context
+import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -23,6 +24,7 @@ class GalleryViewModel(
     private var _cards  = arrayListOf<Card>().toMutableStateList()
     private var _layout by mutableStateOf(GalleryLayout.LargeImage)
 
+    var largeImgStates = mutableMapOf<Int, LargeImgUIState>()
     val cards: List<Card> get() = _cards
     val layout: GalleryLayout get() = _layout
 
@@ -52,6 +54,25 @@ class GalleryViewModel(
                 _cards = it.toMutableStateList()
             }
         }
+    }
+}
+
+class LargeImgUIState(card: Card) {
+    private var _switchable by mutableStateOf(true)
+    private var _trained by mutableStateOf(false)
+    private var _progress by mutableStateOf(0)
+
+    val switchable: Boolean get() = _switchable
+    val trained: Boolean get() = _trained
+    val progress: Int get() = _progress
+
+    var normalBitmap: Bitmap? = null
+    var trainedBitmap: Bitmap? = null
+
+    init {
+        this._switchable = card.imgNormal && card.imgTrained
+        this._trained = (!_switchable) && card.imgTrained
+
     }
 }
 
