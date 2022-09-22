@@ -4,18 +4,38 @@ import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.*
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.*
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalView
 import androidx.core.view.ViewCompat
+import org.yamabuki.bdgallery.ugly.MyColorScheme
+
+private val DarkColorScheme2 = MyColorScheme(
+    darkColorScheme(
+        primary = Purple80,
+        secondary = PurpleGrey80,
+        tertiary = Pink80,
+        ),
+    Color(0xFF1C1B1F),
+    Color(0xFFFFFBFE),
+)
 
 private val DarkColorScheme = darkColorScheme(
     primary = Purple80,
     secondary = PurpleGrey80,
     tertiary = Pink80,
+)
 
+private val LightColorScheme2 = MyColorScheme(
+    lightColorScheme(
+        primary = Purple40,
+        secondary = PurpleGrey40,
+        tertiary = Pink40
+    ),
+    Color(0x111C1B1F),
+    Color(0x11FFFBFE),
 )
 
 private val LightColorScheme = lightColorScheme(
@@ -34,6 +54,9 @@ private val LightColorScheme = lightColorScheme(
     */
 )
 
+private val LocalColors = staticCompositionLocalOf { LightColorScheme2 }
+
+
 @Composable
 fun BangDreamGalleryTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
@@ -41,14 +64,16 @@ fun BangDreamGalleryTheme(
     dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
+
     val colorScheme = when {
-        dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
-            val context = LocalContext.current
-            if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
-        }
-        darkTheme -> DarkColorScheme
-        else -> LightColorScheme
+        //dynamicColor && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S -> {
+        //    val context = LocalContext.current
+        //    if (darkTheme) dynamicDarkColorScheme(context) else dynamicLightColorScheme(context)
+        ///}
+        darkTheme -> DarkColorScheme2
+        else -> LightColorScheme2
     }
+
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -59,9 +84,16 @@ fun BangDreamGalleryTheme(
         }
     }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = Typography,
-        content = content
-    )
+    CompositionLocalProvider(LocalColors provides colorScheme) {
+        MaterialTheme(
+            colorScheme = colorScheme.materialColorScheme,
+            typography = Typography,
+            content = content
+        )
+    }
+
 }
+val androidx.compose.material3.MaterialTheme.myColors: MyColorScheme
+    @Composable
+    @ReadOnlyComposable
+    get() = LocalColors.current
