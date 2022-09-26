@@ -6,8 +6,10 @@ import androidx.compose.ui.graphics.Color
 data class MyColorScheme (
     val materialColorScheme: ColorScheme,
     // my custom colors comes here
-    val lightPure: Color,
-    val darkPure: Color,
+    val powerfulCardBg: Color,
+    val coolCardBg: Color,
+    val happyCardBg: Color,
+    val pureCardBg: Color,
     ) {
     val primary: Color get() = materialColorScheme.primary
     val onPrimary: Color get() = materialColorScheme.onPrimary

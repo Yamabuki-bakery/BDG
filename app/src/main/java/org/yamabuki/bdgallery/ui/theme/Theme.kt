@@ -18,8 +18,10 @@ private val DarkColorScheme2 = MyColorScheme(
         secondary = PurpleGrey80,
         tertiary = Pink80,
         ),
-    Color(0xFF1C1B1F),
-    Color(0xFFFFFBFE),
+    powerfulCardBg = Color(0xFFB71C1C),
+    coolCardBg = Color(0xFF1854B3),
+    happyCardBg = Color(0xFFBE5300),
+    pureCardBg = Color(0xFF449126),
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -34,8 +36,10 @@ private val LightColorScheme2 = MyColorScheme(
         secondary = PurpleGrey40,
         tertiary = Pink40
     ),
-    Color(0x111C1B1F),
-    Color(0x11FFFBFE),
+    powerfulCardBg = Color(0xFFFF76A6),
+    coolCardBg = Color(0xFF7DA2FF),
+    happyCardBg = Color(0xFFFDAB85),
+    pureCardBg = Color(0xFFC1F8C3),
 )
 
 private val LightColorScheme = lightColorScheme(
