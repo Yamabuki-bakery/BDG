@@ -3,11 +3,11 @@ package org.yamabuki.bdgallery.screens.Gallery
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
-import android.util.Log
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -17,16 +17,23 @@ import org.yamabuki.bdgallery.dataLayer.database.MainDB
 import org.yamabuki.bdgallery.dataType.Card
 
 
-
 class GalleryViewModel(
     application: Application
 ) : AndroidViewModel(application) {
     private var _cards  = arrayListOf<Card>().toMutableStateList()
     private var _layout by mutableStateOf(GalleryLayout.LargeImage)
+    private var _scroll1stItem by mutableStateOf(0)
+    private var _scroll1stItemOffset by mutableStateOf(0)
 
-    var largeImgStates = mutableMapOf<Int, LargeImgUIState>()
+    var largeImgStateSet = mutableMapOf<Int, LargeImgUIState>()
     val cards: List<Card> get() = _cards
     val layout: GalleryLayout get() = _layout
+
+
+    // 我諤諤
+    val lazylistState = LazyListState()
+    val lazyGridState = LazyGridState()
+
 
     private val app = application
     private val cardDao = MainDB.getDB(getApplication()).cardDao()
@@ -55,6 +62,12 @@ class GalleryViewModel(
             }
         }
     }
+
+    fun getLargeCardStateObj(target: Card): LargeImgUIState {
+        return LargeImgUIState(target)
+    }
+
+
 }
 
 class LargeImgUIState(card: Card) {
