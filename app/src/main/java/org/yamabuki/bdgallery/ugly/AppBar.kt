@@ -1,4 +1,4 @@
-package org.yamabuki.bdgallery.ugly
+//package org.yamabuki.bdgallery.ugly
 
 import android.util.Log
 import androidx.compose.foundation.layout.*

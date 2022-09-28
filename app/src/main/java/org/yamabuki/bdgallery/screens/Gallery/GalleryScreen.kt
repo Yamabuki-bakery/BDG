@@ -7,7 +7,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
+import androidx.compose.material.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -28,7 +28,6 @@ import org.yamabuki.bdgallery.ui.theme.myColors
 
 val currentScreen = BangAppScreen.Gallery
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun GalleryScreen(
     showNavBar: (Boolean) -> Unit,
@@ -103,7 +102,6 @@ fun GalleryScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun LazyGrid(
     cards: List<Card>,
@@ -143,7 +141,7 @@ private fun LazyGrid(
 
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun LargeImageLazyList(
     cards: List<Card>,

@@ -3,8 +3,8 @@ package org.yamabuki.bdgallery.UIComponents
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.LinearProgressIndicator
-import androidx.compose.material3.MaterialTheme
+import androidx.compose.material.LinearProgressIndicator
+import androidx.compose.material.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -27,7 +27,7 @@ fun MyLinearProgressBar(
                 .fillMaxWidth()
                 .padding(horizontal = 30.dp, vertical = 0.dp),
             color = color,
-            trackColor = trackColor
+            backgroundColor = trackColor
         )
     }
 
@@ -50,7 +50,7 @@ fun MyLinearProgressBar(
                 .fillMaxWidth()
                 .padding(horizontal = 30.dp, vertical = 0.dp),
             color = color,
-            trackColor = trackColor
+            backgroundColor = trackColor
         )
     }
 }

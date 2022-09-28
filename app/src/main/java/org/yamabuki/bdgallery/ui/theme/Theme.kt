@@ -3,7 +3,8 @@ package org.yamabuki.bdgallery.ui.theme
 import android.app.Activity
 import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
-import androidx.compose.material3.*
+import androidx.compose.material.*
+import androidx.compose.material.MaterialTheme.shapes
 import androidx.compose.runtime.*
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
@@ -13,10 +14,10 @@ import androidx.core.view.ViewCompat
 import org.yamabuki.bdgallery.ugly.MyColorScheme
 
 private val DarkColorScheme2 = MyColorScheme(
-    darkColorScheme(
-        primary = Purple80,
-        secondary = PurpleGrey80,
-        tertiary = Pink80,
+    darkColors(
+        primary = Purple200,
+        primaryVariant = Purple700,
+        secondary = Teal200
         ),
     powerfulCardBg = Color(0xFFB71C1C),
     coolCardBg = Color(0xFF1854B3),
@@ -26,17 +27,12 @@ private val DarkColorScheme2 = MyColorScheme(
     progressBarBg = TransWhite,
 )
 
-private val DarkColorScheme = darkColorScheme(
-    primary = Purple80,
-    secondary = PurpleGrey80,
-    tertiary = Pink80,
-)
 
 private val LightColorScheme2 = MyColorScheme(
-    lightColorScheme(
-        primary = Purple40,
-        secondary = PurpleGrey40,
-        tertiary = Pink40
+    lightColors(
+        primary = Purple500,
+        primaryVariant = Purple700,
+        secondary = Teal200
     ),
     powerfulCardBg = Color(0xFFFF76A6),
     coolCardBg = Color(0xFF7DA2FF),
@@ -46,21 +42,6 @@ private val LightColorScheme2 = MyColorScheme(
     progressBarBg = TransBlack,
 )
 
-private val LightColorScheme = lightColorScheme(
-    primary = Purple40,
-    secondary = PurpleGrey40,
-    tertiary = Pink40
-
-    /* Other default colors to override
-    background = Color(0xFFFFFBFE),
-    surface = Color(0xFFFFFBFE),
-    onPrimary = Color.White,
-    onSecondary = Color.White,
-    onTertiary = Color.White,
-    onBackground = Color(0xFF1C1B1F),
-    onSurface = Color(0xFF1C1B1F),
-    */
-)
 
 private val LocalColors = staticCompositionLocalOf { LightColorScheme2 }
 
@@ -69,7 +50,7 @@ private val LocalColors = staticCompositionLocalOf { LightColorScheme2 }
 fun BangDreamGalleryTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
     // Dynamic color is available on Android 12+
-    dynamicColor: Boolean = true,
+    //dynamicColor: Boolean = true,
     content: @Composable () -> Unit
 ) {
 
@@ -82,26 +63,27 @@ fun BangDreamGalleryTheme(
         else -> LightColorScheme2
     }
 
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            //(view.context as Activity).window.statusBarColor = colorScheme.primary.toArgb()
-            (view.context as Activity).window.statusBarColor = Transparent.toArgb()
-            (view.context as Activity).window.navigationBarColor = Transparent.toArgb()
-            ViewCompat.getWindowInsetsController(view)?.isAppearanceLightStatusBars = darkTheme
-        }
-    }
+//    val view = LocalView.current
+//    if (!view.isInEditMode) {
+//        SideEffect {
+//            //(view.context as Activity).window.statusBarColor = colorScheme.primary.toArgb()
+//            (view.context as Activity).window.statusBarColor = Transparent.toArgb()
+//            (view.context as Activity).window.navigationBarColor = Transparent.toArgb()
+//            ViewCompat.getWindowInsetsController(view)?.isAppearanceLightStatusBars = darkTheme
+//        }
+//    }
 
     CompositionLocalProvider(LocalColors provides colorScheme) {
         MaterialTheme(
-            colorScheme = colorScheme.materialColorScheme,
+            colors = colorScheme.materialColorScheme,
             typography = Typography,
-            content = content
+            shapes = shapes,
+            content = content,
         )
     }
 
 }
-val androidx.compose.material3.MaterialTheme.myColors: MyColorScheme
+val androidx.compose.material.MaterialTheme.myColors: MyColorScheme
     @Composable
     @ReadOnlyComposable
     get() = LocalColors.current

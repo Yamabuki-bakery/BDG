@@ -2,16 +2,13 @@ package org.yamabuki.bdgallery.screens.Home
 
 import androidx.compose.animation.rememberSplineBasedDecay
 import androidx.compose.foundation.BorderStroke
-import androidx.compose.foundation.border
-import androidx.compose.foundation.gestures.Orientation
-import androidx.compose.foundation.gestures.scrollable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Menu
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -20,20 +17,17 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.text.font.FontFamily
-import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.tooling.preview.Preview
-import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.components.BangAppBar
-import androidx.lifecycle.viewmodel.compose.viewModel
 import java.time.format.DateTimeFormatter
 
 
 val currentScreen = BangAppScreen.Home
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
     onSettingsClicked: () -> Unit,
@@ -139,7 +133,6 @@ fun HomeScreen(
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun HomeCard (
     modifier: Modifier = Modifier,
@@ -149,7 +142,7 @@ private fun HomeCard (
     content: @Composable ColumnScope.() -> Unit,
 ){
     if (elevated){
-        ElevatedCard(
+        Card(
             modifier = modifier
                 .fillMaxWidth()
                 .padding(16.dp),
