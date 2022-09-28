@@ -22,6 +22,8 @@ private val DarkColorScheme2 = MyColorScheme(
     coolCardBg = Color(0xFF1854B3),
     happyCardBg = Color(0xFFBE5300),
     pureCardBg = Color(0xFF449126),
+    progressBarColor = Shironeri,
+    progressBarBg = TransWhite,
 )
 
 private val DarkColorScheme = darkColorScheme(
@@ -40,6 +42,8 @@ private val LightColorScheme2 = MyColorScheme(
     coolCardBg = Color(0xFF7DA2FF),
     happyCardBg = Color(0xFFFDAB85),
     pureCardBg = Color(0xFFC1F8C3),
+    progressBarColor = Sumi,
+    progressBarBg = TransBlack,
 )
 
 private val LightColorScheme = lightColorScheme(

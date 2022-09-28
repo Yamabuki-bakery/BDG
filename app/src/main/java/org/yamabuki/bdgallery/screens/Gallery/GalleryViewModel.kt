@@ -3,7 +3,7 @@ package org.yamabuki.bdgallery.screens.Gallery
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
-import androidx.compose.foundation.lazy.LazyListState
+import android.util.Log
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -11,34 +11,32 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import kotlinx.coroutines.launch
+import kotlinx.coroutines.*
 import org.yamabuki.bdgallery.R
+import org.yamabuki.bdgallery.dataLayer.ImageLoader.ImageManager
 import org.yamabuki.bdgallery.dataLayer.database.MainDB
 import org.yamabuki.bdgallery.dataType.Card
+import java.io.File
 
 
 class GalleryViewModel(
     application: Application
 ) : AndroidViewModel(application) {
-    private var _cards  = arrayListOf<Card>().toMutableStateList()
-    private var _layout by mutableStateOf(GalleryLayout.LargeImage)
-    private var _scroll1stItem by mutableStateOf(0)
-    private var _scroll1stItemOffset by mutableStateOf(0)
+    private var _cards  = arrayListOf<Card>().toMutableStateList()  // 所有卡片列表
+    private var _layout by mutableStateOf(GalleryLayout.LargeImage)  // UI 顯示佈局狀態
 
-    var largeImgStateSet = mutableMapOf<Int, LargeImgUIState>()
+    var largeImgStateSet = mutableMapOf<Int, LargeImgUIState>()  // 大卡片的 UI 狀態數據
     val cards: List<Card> get() = _cards
     val layout: GalleryLayout get() = _layout
 
 
-    // 我諤諤
-    val lazylistState = LazyListState()
     val lazyGridState = LazyGridState()
-
 
     private val app = application
     private val cardDao = MainDB.getDB(getApplication()).cardDao()
     private val sharedPref = application.getSharedPreferences(application.getString(R.string.app_sharedpref_key), Context.MODE_PRIVATE)
     private val spEditor = sharedPref.edit()
+    private val imageManager = ImageManager(app)
 
 
     init {
@@ -64,28 +62,46 @@ class GalleryViewModel(
     }
 
     fun getLargeCardStateObj(target: Card): LargeImgUIState {
-        return LargeImgUIState(target)
+        val cardId = target.id
+        if (cardId !in largeImgStateSet){
+            largeImgStateSet.put(cardId, LargeImgUIState(target, coroutineScope = viewModelScope, imageManager = imageManager))
+        }
+        return largeImgStateSet[cardId]!!
     }
-
-
 }
 
-class LargeImgUIState(card: Card) {
+class LargeImgUIState(val card: Card, val coroutineScope: CoroutineScope, val imageManager: ImageManager) {
     private var _switchable by mutableStateOf(true)
+    private var _trainable by mutableStateOf(false)
+    private var _progress by mutableStateOf(-1)
     private var _trained by mutableStateOf(false)
-    private var _progress by mutableStateOf(0)
 
     val switchable: Boolean get() = _switchable
-    val trained: Boolean get() = _trained
+    val trainablle: Boolean get() = _trainable
     val progress: Int get() = _progress
+    val trained: Boolean get() = _trained
 
-    var normalBitmap: Bitmap? = null
-    var trainedBitmap: Bitmap? = null
+    private val scope = CoroutineScope(Dispatchers.IO)
 
     init {
         this._switchable = card.imgNormal && card.imgTrained
-        this._trained = (!_switchable) && card.imgTrained
-
+        this._trainable = card.imgTrained
+        this._trained = (!this._switchable) && this.trainablle
+        coroutineScope.launch {
+            val trained = _trained
+            withContext(Dispatchers.IO){
+                imageManager.checkImage(card.getCGFilename(trained), card.getCGurl(trained)).collect {
+                    withContext(Dispatchers.Main){
+                        _progress = (it * 100).toInt()
+                        //Log.d("LargeImgUIState", "The progress is $_progress")
+                    }
+                }
+            }
+        }
+    }
+    fun getFile(): File{
+        val filename = this.card.getCGFilename(_trained)
+        return File(imageManager.getCacheDir(), filename)
     }
 }
 

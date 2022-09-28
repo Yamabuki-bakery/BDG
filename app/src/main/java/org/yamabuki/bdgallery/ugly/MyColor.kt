@@ -10,6 +10,8 @@ data class MyColorScheme (
     val coolCardBg: Color,
     val happyCardBg: Color,
     val pureCardBg: Color,
+    val progressBarColor: Color,
+    val progressBarBg: Color,
     ) {
     val primary: Color get() = materialColorScheme.primary
     val onPrimary: Color get() = materialColorScheme.onPrimary

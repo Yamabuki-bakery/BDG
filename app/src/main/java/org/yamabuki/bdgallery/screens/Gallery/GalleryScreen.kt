@@ -20,6 +20,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import org.yamabuki.bdgallery.BangAppScreen
+import org.yamabuki.bdgallery.UIComponents.MyCircularProgressBar
 import org.yamabuki.bdgallery.components.BangAppBar
 import org.yamabuki.bdgallery.dataType.Card
 import org.yamabuki.bdgallery.dataType.CardAttr
@@ -126,26 +127,18 @@ private fun LazyGrid(
                 onClick = { onCardClick() },
                 modifier = Modifier
                     .aspectRatio(1.0F)
-                    .padding(4.dp),
+                    .padding(2.dp),
             ) {
                 Surface(
                     color = getAttrColor(card = it) ,
                     modifier = Modifier.fillMaxSize()
-                    // todo: change colors based on card attribute
                 ) {
 
                 }
             }
         }
     }
-//    LaunchedEffect(gridState) {
-//        Log.d("[GGRID]", "LaunchedEffect")
-//        snapshotFlow { gridState.firstVisibleItemIndex }
-//            .distinctUntilChanged()
-//            .collect {
-//                updateScrollPos(gridState.firstVisibleItemIndex, gridState.firstVisibleItemScrollOffset)
-//            }
-//    }
+
 }
 
 
@@ -183,19 +176,26 @@ private fun LargeImageLazyList(
                     color = getAttrColor(card = it) ,
                     modifier = Modifier.fillMaxSize()
                 ) {
-
+                    when (stateObj.progress) {
+                        -1 -> MyCircularProgressBar()
+//                        100 -> GlideImage(
+//                            imageModel = stateObj.getFile(),
+//                            imageOptions = ImageOptions(
+//                                contentScale = ContentScale.Fit,
+//                                contentDescription = it.title,
+//
+//                                ),
+//                            requestOptions = {
+//                                RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE)
+//                            },
+//                        )
+                        else -> MyCircularProgressBar(progress = stateObj.progress/100F)
+                    }
                 }
             }
         }
     }
-//    LaunchedEffect(listState) {
-//        Log.d("[LargeImg]", "LaunchedEffect")
-//        snapshotFlow { listState.firstVisibleItemIndex }
-//            .distinctUntilChanged()
-//            .collect {
-//                updateScrollPos(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
-//            }
-//    }
+
 }
 
 @Composable
@@ -224,14 +224,6 @@ private fun MetadataLazyList(
             )
         }
     }
-//    LaunchedEffect(listState) {
-//        Log.d("[MetadataLazyList]", "LaunchedEffect")
-//        snapshotFlow { listState.firstVisibleItemIndex }
-//            .distinctUntilChanged()
-//            .collect {
-//                updateScrollPos(listState.firstVisibleItemIndex, listState.firstVisibleItemScrollOffset)
-//            }
-//    }
 }
 
 @Composable
@@ -263,6 +255,8 @@ fun getAttrColor(card: Card): Color {
         CardAttr.PURE -> MaterialTheme.myColors.pureCardBg
     }
 }
+
+
 
 @Preview(showBackground = true)
 @Composable

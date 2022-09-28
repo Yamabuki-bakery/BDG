@@ -17,3 +17,7 @@ val Pink40 = Color(0xFF7D5260)
 
 val Transparent = Color(0x00000000)
 
+val Sumi = Color(0xff1c1c1c)
+val Shironeri = Color(0xfffcfaf2)
+val TransBlack = Color(0x66000000)
+val TransWhite = Color(0x66ffffff)

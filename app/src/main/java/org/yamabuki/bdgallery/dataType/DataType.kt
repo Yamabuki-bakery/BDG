@@ -18,16 +18,38 @@ data class Card(
     val band: Band = member.band,
 ){
     fun getCGurl (trained: Boolean) : String{
-        if (!(trained and imgTrained) or !(!trained and imgNormal))
+        if ((trained and !imgTrained) or (!trained and !imgNormal))
             throw IllegalArgumentException("[MangaGetCGurl] 特訓，過於惡俗！")
         val imgURL2 = "/assets/${this.area.lower}/characters/resourceset/${this.resSet}_rip/${if (trained) "card_after_training" else "card_normal"}.png"
         return imgURL2
     }
     fun getThumburl (trained: Boolean) : String{
-        if (!(trained and imgTrained) or !(!trained and imgNormal))
+        if ((trained and !imgTrained) or (!trained and !imgNormal))
             throw IllegalArgumentException("[MangaGetThumbUrl] 特訓，過於惡俗！")
         val imgURL2 = "/assets/${this.area.lower}/thumb/chara/card${(this.id / 50).toString().padStart(5, '0')}_rip/${this.resSet}_${if (trained) "after_training" else "normal"}.png"
         return imgURL2
+    }
+    fun getCGFilename (trained: Boolean) : String{
+        if ((trained and !imgTrained) or (!trained and !imgNormal))
+            throw IllegalArgumentException("[getCGFilename] 特訓，過於惡俗！")
+        val training: String
+        if (trained){
+            training = "trained"
+        }else{
+            training = "original"
+        }
+        return "card_${this.id}_${training}.png"
+    }
+    fun getThumbilename (trained: Boolean) : String{
+        if ((trained and !imgTrained) or (!trained and !imgNormal))
+            throw IllegalArgumentException("[getThumbilename] 特訓，過於惡俗！")
+        val training: String
+        if (trained){
+            training = "trained"
+        }else{
+            training = "original"
+        }
+        return "card_thumb_${this.id}_${training}.png"
     }
 }
 
