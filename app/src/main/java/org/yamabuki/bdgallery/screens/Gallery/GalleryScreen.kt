@@ -15,10 +15,15 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.luminance
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.bumptech.glide.load.engine.DiskCacheStrategy
+import com.bumptech.glide.request.RequestOptions
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
+import com.skydoves.landscapist.ImageOptions
+import com.skydoves.landscapist.glide.GlideImage
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.UIComponents.MyCircularProgressBar
 import org.yamabuki.bdgallery.components.BangAppBar
@@ -178,17 +183,17 @@ private fun LargeImageLazyList(
                 ) {
                     when (stateObj.progress) {
                         -1 -> MyCircularProgressBar()
-//                        100 -> GlideImage(
-//                            imageModel = stateObj.getFile(),
-//                            imageOptions = ImageOptions(
-//                                contentScale = ContentScale.Fit,
-//                                contentDescription = it.title,
-//
-//                                ),
-//                            requestOptions = {
-//                                RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE)
-//                            },
-//                        )
+                        100 -> GlideImage(
+                            imageModel = stateObj.getFile(),
+                            imageOptions = ImageOptions(
+                                contentScale = ContentScale.Fit,
+                                contentDescription = it.title,
+
+                                ),
+                            requestOptions = {
+                                RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE)
+                            },
+                        )
                         else -> MyCircularProgressBar(progress = stateObj.progress/100F)
                     }
                 }
