@@ -5,12 +5,12 @@ plugins {
 }
 
 android {
-    compileSdk 32
+    compileSdk 33
 
     defaultConfig {
         applicationId "org.yamabuki.bdgallery"
         minSdk 28
-        targetSdk 32
+        targetSdk 33
         versionCode 3
         versionName "3.0"
 
@@ -38,6 +38,9 @@ android {
     }
     kotlinOptions {
         jvmTarget = '1.8'
+    }
+    kotlin.sourceSets.all {
+        languageSettings.optIn("kotlin.RequiresOptIn")
     }
     buildFeatures {
         compose true
