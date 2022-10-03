@@ -1,22 +1,30 @@
 package org.yamabuki.bdgallery.screens.Gallery
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
+import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.graphics.luminance
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.bumptech.glide.load.engine.DiskCacheStrategy
@@ -26,6 +34,8 @@ import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.glide.GlideImage
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.UIComponents.MyCircularProgressBar
+import org.yamabuki.bdgallery.components.AppBarControl.AppBarState
+import org.yamabuki.bdgallery.components.AppBarControl.EnterAlwaysState
 import org.yamabuki.bdgallery.components.BangAppBar
 import org.yamabuki.bdgallery.dataType.Card
 import org.yamabuki.bdgallery.dataType.CardAttr
@@ -33,7 +43,18 @@ import org.yamabuki.bdgallery.ui.theme.myColors
 
 val currentScreen = BangAppScreen.Gallery
 
-@OptIn(ExperimentalMaterial3Api::class)
+
+@Composable
+private fun rememberToolbarState(setHeight: Dp): AppBarState {
+    val height: Int = with(LocalDensity.current){
+        (setHeight + WindowInsets.statusBars.asPaddingValues().calculateTopPadding()).roundToPx()
+    }
+    return rememberSaveable(saver = EnterAlwaysState.Saver) {
+        EnterAlwaysState(height)
+    }
+}
+
+
 @Composable
 fun GalleryScreen(
     showNavBar: (Boolean) -> Unit,
@@ -42,22 +63,25 @@ fun GalleryScreen(
 ) {
     val allScreens = BangAppScreen.values().toList()
     val systemUiController = rememberSystemUiController()
-    val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
-        rememberTopAppBarScrollState()
-    )
-    val statusBarColor = TopAppBarDefaults.centerAlignedTopAppBarColors()
-        .containerColor(scrollFraction = scrollBehavior.scrollFraction).value
+    //val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior(
+    //    rememberTopAppBarScrollState()
+    //)
+    //val statusBarColor = TopAppBarDefaults.centerAlignedTopAppBarColors()
+    //    .containerColor(scrollFraction = scrollBehavior.scrollFraction).value
 
-
+    val toolbarState = rememberToolbarState(64.dp)
     SideEffect {
-        systemUiController.setSystemBarsColor(Color.Transparent, statusBarColor.luminance() > 0.5)
-        //systemUiController.setStatusBarColor(statusBarColor)
-        if (scrollBehavior.state.offset == 0f){
+    //    systemUiController.setSystemBarsColor(Color.Transparent, statusBarColor.luminance() > 0.5)
+    //    //systemUiController.setStatusBarColor(statusBarColor)
+        if (toolbarState.scrollOffset == 0f){
             showNavBar(true)
-        }else{
+        }
+
+        if (toolbarState.height - toolbarState.scrollOffset == 0f){
             showNavBar(false)
         }
-       // Log.d("Scroll frac", scrollBehavior.state.offset.toString())
+        //Log.d("Scroll offset", toolbarState.offset.toString())
+        //Log.d("Scroll scrolloffset", toolbarState.scrollOffset.toString())
     }
 
     LaunchedEffect(Unit) {
@@ -65,26 +89,40 @@ fun GalleryScreen(
     }
     //val scrollListState = rememberLazyListState()
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            GalleryAppbar(
-                scrollBehavior,
-                { viewModel.setLayout() }
-            )
+
+
+    val nestedScrollConnection = remember {
+        object : NestedScrollConnection {
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                toolbarState.scrollTopLimitReached =
+                    viewModel.lazyGridState.firstVisibleItemIndex == 0 &&
+                            viewModel.lazyGridState.firstVisibleItemScrollOffset == 0
+
+                toolbarState.scrollOffset = toolbarState.scrollOffset - available.y
+                return Offset(0f, toolbarState.consumed)
+            }
         }
-    ) { innerPadding ->
+    }
+
+    Box(
+        modifier = Modifier.nestedScroll(nestedScrollConnection),
+
+    ) {
 
         val listPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding(),
+            top =  with(LocalDensity.current) { (toolbarState.height - toolbarState.scrollOffset).toDp() },
             bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         )
+
+        val contentModifier: Modifier = Modifier//.graphicsLayer { translationY = toolbarState.offset }
+
 
         when (viewModel.layout) {
             GalleryLayout.Metadata -> MetadataLazyList(
                 cards = viewModel.cards,
                 contentPadding = listPadding,
                 gridState = viewModel.lazyGridState,
+                modifier = contentModifier, //+ toolbarState.height },
  //               updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, true) }
             )
 
@@ -94,7 +132,9 @@ fun GalleryScreen(
                 getStateObj = { viewModel.getLargeCardStateObj(it) },
                 onCardClick = {},
                 gridState = viewModel.lazyGridState,
-  //              updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, true) }
+                modifier = contentModifier,
+
+                //              updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, true) }
             )
 
             GalleryLayout.Grid -> LazyGrid(
@@ -102,13 +142,24 @@ fun GalleryScreen(
                 contentPadding = listPadding,
                 gridState = viewModel.lazyGridState,
  //               updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, false) },
-                onCardClick = {}
+                onCardClick = {},
+                modifier = contentModifier,
             )
         }
+        GalleryAppbar(
+            //scrollBehavior,
+            modifier = Modifier
+                .height(
+                    with(LocalDensity.current) { toolbarState.height.toDp() }
+                )
+                .offset(y =  with(LocalDensity.current) { toolbarState.offset.toDp() }),
+            onLayoutChangeClicked = { viewModel.setLayout() },
+            toolbarState = toolbarState
+        )
     }
 }
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun LazyGrid(
     cards: List<Card>,
@@ -116,11 +167,13 @@ private fun LazyGrid(
     onCardClick: () -> Unit,
   //  updateScrollPos: (Int, Int) -> Unit,
     gridState: LazyGridState,
+    modifier: Modifier = Modifier,
     ){
     LazyVerticalGrid(
         columns = GridCells.Adaptive(minSize = 96.dp),
         contentPadding = contentPadding,
         state = gridState,
+        modifier = modifier,
     ){
         items(
             cards,
@@ -148,7 +201,7 @@ private fun LazyGrid(
 
 
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterialApi::class)
 @Composable
 private fun LargeImageLazyList(
     cards: List<Card>,
@@ -156,7 +209,9 @@ private fun LargeImageLazyList(
     getStateObj: (Card) -> LargeImgUIState,
     onCardClick: () -> Unit,
     gridState: LazyGridState,
- //   updateScrollPos: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier,
+
+    //   updateScrollPos: (Int, Int) -> Unit,
 
 ){
 
@@ -164,7 +219,9 @@ private fun LargeImageLazyList(
         columns = GridCells.Fixed(1),
         contentPadding = contentPadding,
         state = gridState,
-    ){
+        modifier = modifier,
+
+        ){
         items(
             cards,
             key = { it.id },
@@ -208,13 +265,16 @@ private fun MetadataLazyList(
     cards: List<Card>,
     contentPadding: PaddingValues,
     gridState: LazyGridState,
-   // updateScrollPos: (Int, Int) -> Unit,
+    modifier: Modifier = Modifier,
+    // updateScrollPos: (Int, Int) -> Unit,
 ){
     LazyVerticalGrid(
         columns = GridCells.Fixed(1),
         contentPadding = contentPadding,
         state = gridState,
-    ){
+        modifier = modifier,
+
+        ){
         items(
             cards,
             key = { it.id },
@@ -233,13 +293,18 @@ private fun MetadataLazyList(
 
 @Composable
 private fun GalleryAppbar(
-    scrollBehavior: TopAppBarScrollBehavior,
+    //scrollBehavior: TopAppBarScrollBehavior,
+    modifier: Modifier = Modifier,
+    height: Dp = 64.dp,
     onLayoutChangeClicked: () -> Unit = {},
+    toolbarState: AppBarState
 ) {
+
     // Fuck you Google
     BangAppBar(
         currentScreen = BangAppScreen.Gallery,
-        scrollBehavior = scrollBehavior,
+        //scrollBehavior = scrollBehavior,
+        modifier = modifier,
         actions = {
             IconButton(onClick = { onLayoutChangeClicked() }) {
                 Icon(
@@ -248,6 +313,7 @@ private fun GalleryAppbar(
                 )
             }
         },
+        height = height
     )
 }
 

@@ -5,10 +5,8 @@ import android.content.Context
 import android.graphics.Bitmap
 import android.util.Log
 import androidx.compose.foundation.lazy.grid.LazyGridState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.toMutableStateList
+import androidx.compose.runtime.*
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import kotlinx.coroutines.*
@@ -22,7 +20,7 @@ import java.io.File
 class GalleryViewModel(
     application: Application
 ) : AndroidViewModel(application) {
-    private var _cards  = arrayListOf<Card>().toMutableStateList()  // 所有卡片列表
+    private var _cards = mutableStateListOf<Card>()  // 所有卡片列表
     private var _layout by mutableStateOf(GalleryLayout.LargeImage)  // UI 顯示佈局狀態
 
     var largeImgStateSet = mutableMapOf<Int, LargeImgUIState>()  // 大卡片的 UI 狀態數據
@@ -56,7 +54,9 @@ class GalleryViewModel(
     fun getCards(){
         viewModelScope.launch {
             cardDao.getAllCards().collect {
-                _cards = it.toMutableStateList()
+                _cards.clear()
+                largeImgStateSet.clear()
+                _cards.addAll(it)
             }
         }
     }
@@ -69,6 +69,7 @@ class GalleryViewModel(
         return largeImgStateSet[cardId]!!
     }
 }
+
 
 class LargeImgUIState(val card: Card, val coroutineScope: CoroutineScope, val imageManager: ImageManager) {
     private var _switchable by mutableStateOf(true)

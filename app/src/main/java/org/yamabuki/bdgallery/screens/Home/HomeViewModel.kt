@@ -8,6 +8,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.toMutableStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import org.yamabuki.bdgallery.R
 import org.yamabuki.bdgallery.dataLayer.card.impl.MyCardRepo
@@ -84,6 +85,7 @@ class HomeViewModel(
     fun clear() {
         viewModelScope.launch {
             //val cardDao = MainDB.getDB(getApplication()).cardDao()
+            delay(3000)
             myCardRepo.delAllCards(cardDao)
             myMangaRepo.delAllManga(mangaDao)
             myStickerRepo.delAllStickers(stickerDao)
