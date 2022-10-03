@@ -17,7 +17,7 @@ fun StickersScreen(){
     val currentScreen = BangAppScreen.Stickers
     Scaffold(
         topBar = {
-            BangAppBar(currentScreen)
+            BangAppBar(currentScreen, modifier = Modifier)
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {

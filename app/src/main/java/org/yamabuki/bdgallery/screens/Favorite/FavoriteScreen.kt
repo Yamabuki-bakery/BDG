@@ -17,7 +17,7 @@ fun FavoriteScreen(){
     val currentScreen = BangAppScreen.Favorite
     Scaffold(
         topBar = {
-            BangAppBar(currentScreen)
+            BangAppBar(currentScreen, modifier = Modifier)
         }
     ) { innerPadding ->
         Column(modifier = Modifier.padding(innerPadding)) {

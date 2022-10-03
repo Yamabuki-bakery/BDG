@@ -7,10 +7,12 @@ import androidx.compose.material.Text
 import androidx.compose.material.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.ui.theme.myColors
@@ -18,19 +20,24 @@ import org.yamabuki.bdgallery.ui.theme.myColors
 @Composable
 fun BangAppBar(
     currentScreen: BangAppScreen,
+    modifier: Modifier = Modifier,
     navigationIcon: @Composable () -> Unit = {},
-    actions: @Composable RowScope.() -> Unit = {},
+    actions: @Composable() (RowScope.() -> Unit) = {},
     //scrollBehavior: TopAppBarScrollBehavior? = null,
     statusBarTransparent: Boolean = false,
+    height: Dp = 64.dp,
 ) {
-    val allScreens = BangAppScreen.values().toList()
+    //val allScreens = BangAppScreen.values().toList()
     //加入一個 Surface 來承擔頂欄的底色，并且頂欄 container 背景色已經設置為透明
     //以便系統狀態欄和頂欄的顔色一致，，，
     Surface(
-        color = MaterialTheme.myColors.surface,
+        color = MaterialTheme.myColors.primary,
+
 //        tonalElevation = 3.0.dp,
 //        shadowElevation = 3.0.dp
-        elevation = 3.dp
+        modifier = modifier.fillMaxWidth(),
+        elevation = 8.0.dp,
+
     ) {
         TopAppBar(
             title = {
@@ -42,6 +49,8 @@ fun BangAppBar(
             },
             navigationIcon = navigationIcon,
             actions = actions,
+            backgroundColor = Color.Transparent,
+            elevation = 0.dp,
             //scrollBehavior = scrollBehavior,
 //            colors = TopAppBarDefaults.centerAlignedTopAppBarColors(
 //                containerColor = Color.Transparent,
@@ -59,6 +68,7 @@ fun BangAppBar(
 fun BangAppBarPreview() {
     BangAppBar(
         currentScreen = BangAppScreen.Home,
+        modifier = Modifier,
     )
 }
 

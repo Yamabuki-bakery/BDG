@@ -49,19 +49,21 @@ fun BangNavBar(
     ) {
         Surface(
             color = MaterialTheme.myColors.surface,
-            elevation = 5.0.dp,
+            elevation = 8.0.dp,
             // 不把這個設成和 Navigation Bar 一樣的話，顔色就會有微妙的差異，我 tm
             // 我日，設完也有微妙的差異，直接把下面那個設成透明，我佛了
             //shadowElevation = 15.0.dp
         ) {
             BottomNavigation(
-                modifier = Modifier.windowInsetsPadding(
-                    // 這個 modifier 是從 nowinandroid 抄來的，能直接計算系統欄的高度，感恩
-                    WindowInsets.navigationBars.only( // 或者 safe drawing？
-                        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
-                    ),
-                ),
-                backgroundColor = Color.Transparent
+                //modifier = Modifier.windowInsetsPadding(
+                //    // 這個 modifier 是從 nowinandroid 抄來的，能直接計算系統欄的高度，感恩
+                //    WindowInsets.navigationBars.only( // 或者 safe drawing？
+                //        WindowInsetsSides.Horizontal + WindowInsetsSides.Bottom
+                //    ),
+                //),
+                modifier = Modifier.padding(bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()),
+                backgroundColor = Color.Transparent,
+                elevation = 0.dp,
             ) {
                 allScreens.forEachIndexed { index, screen ->
                     BottomNavigationItem(
