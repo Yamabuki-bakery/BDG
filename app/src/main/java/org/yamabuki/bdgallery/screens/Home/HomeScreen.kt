@@ -13,6 +13,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontFamily
@@ -29,7 +30,7 @@ val currentScreen = BangAppScreen.Home
 
 @Composable
 fun HomeScreen(
-    onSettingsClicked: () -> Unit,
+    onSettingsClicked: (Boolean?) -> Unit,
     viewModel: HomeViewModel = viewModel(),
     fatherInnerPadding: PaddingValues,
 ) {
@@ -51,15 +52,15 @@ fun HomeScreen(
     //    //systemUiController.setStatusBarColor(  statusBarColor)
     }
     LaunchedEffect(Unit) {
-        //viewModel.init()
+        onSettingsClicked(true)
     }
     Scaffold(
-        modifier = Modifier//.nestedScroll(scrollBehavior.nestedScrollConnection)
+        modifier = Modifier,//.nestedScroll(scrollBehavior.nestedScrollConnection)
                 // 底部 padding 從 activity 拿到的 bottom bar 高度
-            .padding(bottom = fatherInnerPadding.calculateBottomPadding()),
+            //.padding(bottom = fatherInnerPadding.calculateBottomPadding()),
         topBar = {
             HomeAppbar(
-                onSettingsClicked,
+                { onSettingsClicked(null) },
                 //scrollBehavior
             )
         }
@@ -67,7 +68,7 @@ fun HomeScreen(
         HomeContent(
             viewModel = viewModel,
             scrollState = scrollState,
-            innerPadding = innerPadding
+            innerPadding =  fatherInnerPadding
         )
     }
 }
@@ -132,7 +133,7 @@ private fun HomeContent(
         Spacer(modifier = Modifier.padding(8.dp))
         Text(text = viewModel.state.name)
         Spacer(modifier = Modifier.padding(8.dp))
-        Row(modifier = Modifier.padding(innerPadding)) {
+        Row() {
             Button(onClick = { viewModel.refresh() }) {
                 Text(text = "LOAD")
             }
@@ -141,7 +142,7 @@ private fun HomeContent(
                 Text(text = "Clear")
             }
         }
-        Spacer(modifier = Modifier.navigationBarsPadding())  // 防止和底部導航欄重叠
+        Spacer(modifier = Modifier.padding(innerPadding))  // 防止和底部導航欄重叠
     }
 }
 

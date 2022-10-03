@@ -1,5 +1,6 @@
 package org.yamabuki.bdgallery.screens.Gallery
 
+import android.util.Log
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -44,7 +45,6 @@ private fun rememberToolbarState(setHeight: Dp): AppBarState {
         (setHeight + WindowInsets.statusBars.asPaddingValues().calculateTopPadding()).roundToPx()
     }
     return rememberSaveable(saver = EnterAlwaysState.Saver) {
-
         EnterAlwaysState(height)
     }
 }
@@ -64,16 +64,19 @@ fun GalleryScreen(
     //val statusBarColor = TopAppBarDefaults.centerAlignedTopAppBarColors()
     //    .containerColor(scrollFraction = scrollBehavior.scrollFraction).value
 
-
+    val toolbarState = rememberToolbarState(64.dp)
     SideEffect {
     //    systemUiController.setSystemBarsColor(Color.Transparent, statusBarColor.luminance() > 0.5)
     //    //systemUiController.setStatusBarColor(statusBarColor)
-    //    if (scrollBehavior.state.offset == 0f){
-    //        showNavBar(true)
-    //    }else{
-    //        showNavBar(false)
-    //    }
-       // Log.d("Scroll frac", scrollBehavior.state.offset.toString())
+        if (toolbarState.scrollOffset == 0f){
+            showNavBar(true)
+        }
+
+        if (toolbarState.height - toolbarState.scrollOffset == 0f){
+            showNavBar(false)
+        }
+        //Log.d("Scroll offset", toolbarState.offset.toString())
+        //Log.d("Scroll scrolloffset", toolbarState.scrollOffset.toString())
     }
 
     LaunchedEffect(Unit) {
@@ -81,7 +84,7 @@ fun GalleryScreen(
     }
     //val scrollListState = rememberLazyListState()
 
-    val toolbarState = rememberToolbarState(64.dp)
+
 
     val nestedScrollConnection = remember {
         object : NestedScrollConnection {
@@ -96,32 +99,25 @@ fun GalleryScreen(
         }
     }
 
-    Scaffold(
+    Box(
         modifier = Modifier.nestedScroll(nestedScrollConnection),
-        topBar = {
-            GalleryAppbar(
-                //scrollBehavior,
-                modifier = Modifier
-                    .height(
-                        with(LocalDensity.current) { toolbarState.height.toDp() }
-                    )
-                    .graphicsLayer { translationY = toolbarState.offset },
-                onLayoutChangeClicked = { viewModel.setLayout() },
-            )
-        }
-    ) { innerPadding ->
+
+    ) {
 
         val listPadding = PaddingValues(
-            top = innerPadding.calculateTopPadding(),
+            top =  with(LocalDensity.current) { (toolbarState.height - toolbarState.scrollOffset).toDp() },
             bottom = WindowInsets.navigationBars.asPaddingValues().calculateBottomPadding()
         )
+
+        val contentModifier: Modifier = Modifier//.graphicsLayer { translationY = toolbarState.offset }
+
 
         when (viewModel.layout) {
             GalleryLayout.Metadata -> MetadataLazyList(
                 cards = viewModel.cards,
                 contentPadding = listPadding,
                 gridState = viewModel.lazyGridState,
-                modifier = Modifier.graphicsLayer { translationY = toolbarState.offset }, //+ toolbarState.height },
+                modifier = contentModifier, //+ toolbarState.height },
  //               updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, true) }
             )
 
@@ -131,7 +127,7 @@ fun GalleryScreen(
                 getStateObj = { viewModel.getLargeCardStateObj(it) },
                 onCardClick = {},
                 gridState = viewModel.lazyGridState,
-                modifier = Modifier.graphicsLayer { translationY =  toolbarState.offset },
+                modifier = contentModifier,
 
                 //              updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, true) }
             )
@@ -142,10 +138,19 @@ fun GalleryScreen(
                 gridState = viewModel.lazyGridState,
  //               updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, false) },
                 onCardClick = {},
-                modifier = Modifier.graphicsLayer { translationY = toolbarState.offset },
-
-                )
+                modifier = contentModifier,
+            )
         }
+        GalleryAppbar(
+            //scrollBehavior,
+            modifier = Modifier
+                .height(
+                    with(LocalDensity.current) { toolbarState.height.toDp() }
+                )
+                .offset(y =  with(LocalDensity.current) { toolbarState.offset.toDp() }),
+            onLayoutChangeClicked = { viewModel.setLayout() },
+            toolbarState = toolbarState
+        )
     }
 }
 
@@ -287,7 +292,9 @@ private fun GalleryAppbar(
     modifier: Modifier = Modifier,
     height: Dp = 64.dp,
     onLayoutChangeClicked: () -> Unit = {},
+    toolbarState: AppBarState
 ) {
+
     // Fuck you Google
     BangAppBar(
         currentScreen = BangAppScreen.Gallery,

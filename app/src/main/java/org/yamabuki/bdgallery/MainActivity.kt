@@ -104,7 +104,11 @@ fun BangApp() {
                 composable(BangAppScreen.Home.name) {
                     val viewModel: HomeViewModel = viewModel()
                     HomeScreen(
-                        { showNavBar = !showNavBar },
+                        {
+                            if (it != null) {
+                                showNavBar = it
+                            }else showNavBar = !showNavBar
+                        },
                         viewModel = viewModel,
                         innerPadding,
                     )
