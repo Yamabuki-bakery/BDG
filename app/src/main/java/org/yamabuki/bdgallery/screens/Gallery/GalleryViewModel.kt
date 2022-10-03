@@ -93,7 +93,8 @@ class LargeImgUIState(val card: Card, val coroutineScope: CoroutineScope, val im
             withContext(Dispatchers.IO){
                 imageManager.checkImage(card.getCGFilename(trained), card.getCGurl(trained)).collect {
                     withContext(Dispatchers.Main){
-                        _progress = (it * 100).toInt()
+                        Log.d("[coro]", "the progress is $it")
+                        _progress = it
                         //Log.d("LargeImgUIState", "The progress is $_progress")
                     }
                 }

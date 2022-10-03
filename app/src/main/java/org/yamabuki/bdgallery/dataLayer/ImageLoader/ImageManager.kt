@@ -13,6 +13,7 @@ import okhttp3.Request
 import org.yamabuki.bdgallery.R
 import java.io.BufferedOutputStream
 import java.io.File
+import java.io.IOException
 import java.io.OutputStream
 
 class ImageManager(val context: Context, val maxDownloadWorkers: Int = 8) {
@@ -23,10 +24,10 @@ class ImageManager(val context: Context, val maxDownloadWorkers: Int = 8) {
         return context.cacheDir
     }
 
-    fun checkImage(filename: String, url: String): Flow<Float> = flow {
+    fun checkImage(filename: String, url: String): Flow<Int> = flow {
         val file = File(context.cacheDir, filename)
         if (file.exists()){
-            emit(1F)
+            emit(101)
             return@flow
         }
 
@@ -41,10 +42,18 @@ class ImageManager(val context: Context, val maxDownloadWorkers: Int = 8) {
             .get()
             .build()
 
-        val resp = client.newCall(request).execute()
+        val resp: okhttp3.Response
+        try {
+            resp = client.newCall(request).execute()
+        }catch (err: IOException){
+            Log.d("[checkImage]", "File: $filename, URL: $url, 網路過於惡俗")
+            emit(-1)
+            return@flow
+        }
+
         if (!resp.isSuccessful){
             Log.d("[checkImage]", "File: $filename, URL: $url, request failed!")
-            emit(-1F)
+            emit(-1)
             return@flow
         }
         Log.d("[checkImage]", "$filename  downloading!")
@@ -57,7 +66,7 @@ class ImageManager(val context: Context, val maxDownloadWorkers: Int = 8) {
 
         val inBuff = resp.body()?.byteStream()
         if (inBuff == null){
-            emit(-1F)
+            emit(-1)
             return@flow
         }
         var total = 0L
@@ -74,12 +83,14 @@ class ImageManager(val context: Context, val maxDownloadWorkers: Int = 8) {
             //Log.d("[checkImage]", "$filename read $byte data!!")
             outStream.write(buff, 0, byte)
             total += byte
-            if (filesize != 0L)  emit(total.toFloat()/filesize)
+            if (filesize != 0L)  emit(((total.toFloat()/filesize)*100).toInt())
         }
-        Log.d("[checkImage]", "$filename download OK!")
+
         outStream.flush()
         outStream.close()
         newFile.renameTo(File(context.cacheDir, filename))
+        emit(101)
+        Log.d("[checkImage]", "$filename download OK!")
     }
 }
 // DNT: 1

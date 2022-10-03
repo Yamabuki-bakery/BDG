@@ -1,6 +1,8 @@
 package org.yamabuki.bdgallery.screens.Gallery
 
 import android.util.Log
+import androidx.compose.animation.core.TweenSpec
+import androidx.compose.animation.core.animateIntAsState
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -9,10 +11,7 @@ import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.material.*
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Settings
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.SideEffect
-import androidx.compose.runtime.remember
+import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
@@ -32,6 +31,7 @@ import com.bumptech.glide.request.RequestOptions
 import com.google.accompanist.systemuicontroller.rememberSystemUiController
 import com.skydoves.landscapist.ImageOptions
 import com.skydoves.landscapist.glide.GlideImage
+import kotlinx.coroutines.flow.collect
 import org.yamabuki.bdgallery.BangAppScreen
 import org.yamabuki.bdgallery.UIComponents.MyCircularProgressBar
 import org.yamabuki.bdgallery.components.AppBarControl.AppBarState
@@ -84,8 +84,11 @@ fun GalleryScreen(
         //Log.d("Scroll scrolloffset", toolbarState.scrollOffset.toString())
     }
 
-    LaunchedEffect(Unit) {
-       // viewModel.init()
+    LaunchedEffect(viewModel.lazyGridState) {
+       snapshotFlow { viewModel.lazyGridState.firstVisibleItemIndex }
+           .collect(){
+               Log.d("[snapshotFlow]", "first visible is $it, and count ${viewModel.lazyGridState.layoutInfo.visibleItemsInfo.size}")
+           }
     }
     //val scrollListState = rememberLazyListState()
 
@@ -152,7 +155,7 @@ fun GalleryScreen(
                 .height(
                     with(LocalDensity.current) { toolbarState.height.toDp() }
                 )
-                .offset(y =  with(LocalDensity.current) { toolbarState.offset.toDp() }),
+                .offset(y = with(LocalDensity.current) { toolbarState.offset.toDp() }),
             onLayoutChangeClicked = { viewModel.setLayout() },
             toolbarState = toolbarState
         )
@@ -238,9 +241,13 @@ private fun LargeImageLazyList(
                     color = getAttrColor(card = it) ,
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    when (stateObj.progress) {
+                    val aProgress by animateIntAsState(
+                        targetValue = stateObj.progress,
+                        animationSpec = TweenSpec(75)
+                    )
+                    when (aProgress) {
                         -1 -> MyCircularProgressBar()
-                        100 -> GlideImage(
+                        101 -> GlideImage(
                             imageModel = stateObj.getFile(),
                             imageOptions = ImageOptions(
                                 contentScale = ContentScale.Fit,
@@ -251,7 +258,7 @@ private fun LargeImageLazyList(
                                 RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE)
                             },
                         )
-                        else -> MyCircularProgressBar(progress = stateObj.progress/100F)
+                        else -> MyCircularProgressBar(progress =aProgress/100F)
                     }
                 }
             }
