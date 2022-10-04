@@ -3,6 +3,7 @@ package org.yamabuki.bdgallery.screens.Gallery
 import android.util.Log
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateIntAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyGridState
@@ -243,7 +244,7 @@ private fun LargeImageLazyList(
                 ) {
                     val aProgress by animateIntAsState(
                         targetValue = stateObj.progress,
-                        animationSpec = TweenSpec(75)
+                        animationSpec = tween(75)
                     )
                     when (aProgress) {
                         -1 -> MyCircularProgressBar()
