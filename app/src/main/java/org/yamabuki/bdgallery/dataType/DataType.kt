@@ -40,7 +40,7 @@ data class Card(
         }
         return "card_${this.id}_${training}.png"
     }
-    fun getThumbilename (trained: Boolean) : String{
+    fun getThumbfilename (trained: Boolean) : String{
         if ((trained and !imgTrained) or (!trained and !imgNormal))
             throw IllegalArgumentException("[getThumbilename] 特訓，過於惡俗！")
         val training: String

@@ -15,6 +15,7 @@ import org.yamabuki.bdgallery.dataLayer.ImageLoader.ImageManager
 import org.yamabuki.bdgallery.dataLayer.database.MainDB
 import org.yamabuki.bdgallery.dataType.Card
 import java.io.File
+import kotlin.random.Random
 
 
 class GalleryViewModel(
@@ -34,7 +35,7 @@ class GalleryViewModel(
     private val cardDao = MainDB.getDB(getApplication()).cardDao()
     private val sharedPref = application.getSharedPreferences(application.getString(R.string.app_sharedpref_key), Context.MODE_PRIVATE)
     private val spEditor = sharedPref.edit()
-    private val imageManager = ImageManager(app)
+    private val imageManager = ImageManager(app, viewModelScope)
 
 
     init {
@@ -77,6 +78,8 @@ class LargeImgUIState(val card: Card, val coroutineScope: CoroutineScope, val im
     private var _progress by mutableStateOf(-1)
     private var _trained by mutableStateOf(false)
 
+
+
     val switchable: Boolean get() = _switchable
     val trainablle: Boolean get() = _trainable
     val progress: Int get() = _progress
@@ -88,20 +91,34 @@ class LargeImgUIState(val card: Card, val coroutineScope: CoroutineScope, val im
         this._switchable = card.imgNormal && card.imgTrained
         this._trainable = card.imgTrained
         this._trained = (!this._switchable) && this.trainablle
+
+        this.runImageMgr()
+    }
+    fun runImageMgr(){
         coroutineScope.launch {
-            val trained = _trained
-            withContext(Dispatchers.IO){
-                imageManager.checkImage(card.getCGFilename(trained), card.getCGurl(trained)).collect {
-                    withContext(Dispatchers.Main){
-                        Log.d("[coro]", "the progress is $it")
-                        _progress = it
-                        //Log.d("LargeImgUIState", "The progress is $_progress")
-                    }
+            val reqTrained = _trained
+            val filename = card.getCGFilename(reqTrained)
+            val url = card.getCGurl(reqTrained)
+            withContext(Dispatchers.Main){
+                val pChan = imageManager.commit(filename, url)
+                for (value in pChan){
+                    this@LargeImgUIState.setProgress(value, reqTrained)
                 }
             }
         }
     }
+    suspend fun setProgress(progress: Int, trained: Boolean){
+        //withContext(Dispatchers.Main){
+            if (_trained xor trained) return//@withContext
+            if (_progress == progress) return//@withContext
+            _progress = progress
+        //}
+    }
+
     fun getFile(): File{
+        /*
+        * get File obj for Glide data model
+        * */
         val filename = this.card.getCGFilename(_trained)
         return File(imageManager.getCacheDir(), filename)
     }
