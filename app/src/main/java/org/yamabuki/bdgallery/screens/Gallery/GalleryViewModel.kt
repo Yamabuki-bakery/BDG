@@ -9,6 +9,7 @@ import androidx.compose.runtime.*
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
+import androidx.lifecycle.viewmodel.compose.viewModel
 import kotlinx.coroutines.*
 import org.yamabuki.bdgallery.R
 import org.yamabuki.bdgallery.dataLayer.ImageLoader.ImageManager
@@ -68,6 +69,20 @@ class GalleryViewModel(
             largeImgStateSet.put(cardId, LargeImgUIState(target, coroutineScope = viewModelScope, imageManager = imageManager))
         }
         return largeImgStateSet[cardId]!!
+    }
+
+    fun reportOnScreenView(){
+        val first = lazyGridState.firstVisibleItemIndex
+        val amount = lazyGridState.layoutInfo.visibleItemsInfo.size
+        val filenameList = mutableListOf<String>()
+        if (amount == 0) return
+        for (i in first..first + amount){
+            if (this._cards[i].imgTrained)
+                filenameList.add(this._cards[i].getCGFilename(true))
+            if (this._cards[i].imgNormal)
+                filenameList.add(this._cards[i].getCGFilename(false))
+        }
+        viewModelScope.launch { this@GalleryViewModel.imageManager.updatePriorList(filenameList) }
     }
 }
 
