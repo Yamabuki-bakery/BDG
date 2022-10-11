@@ -10,7 +10,8 @@ import okhttp3.Request
 import org.yamabuki.bdgallery.R
 import java.io.File
 import java.io.IOException
-import java.nio.channels.ClosedChannelException
+import java.io.InvalidObjectException
+import kotlin.math.min
 import kotlin.random.Random
 
 class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownloadWorkers: Int = 8) {
@@ -19,13 +20,14 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
     private val stoppedJobQueue = mutableMapOf<String, Job>()
     private val sLock = Mutex()
     private val idleJobQueue = mutableMapOf<String, Job>()
+    private val iLock = Mutex()
 
-    private val priorJobList = mutableListOf<String>()
+    private val priorFilenameList = mutableListOf<String>()
     private val pLock = Mutex()
 
     private val client = OkHttpClient()
 
-    suspend fun dispatcher(){
+    suspend fun dispatcher2(){
         val toRemove = mutableListOf<String>()
 
         this.sLock.lock()
@@ -45,6 +47,146 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         }
         this.rLock.unlock()
         this.sLock.unlock()
+    }
+
+    suspend fun dispatcher(){
+        val uid = Random.nextInt()
+        suspend fun runOrResumeJob(filename: String, fromIdle: Boolean){
+            /* must run under rLock and iLock or sLock */
+            val job: Job
+            if (fromIdle) {
+                job = this.idleJobQueue[filename]!!
+                this.idleJobQueue.remove(filename)
+                job.idle = false
+            } else {
+                job = this.stoppedJobQueue[filename]!!
+                this.stoppedJobQueue
+            }
+            this.runningJobQueue[job.filename] = job
+            if (job.started) {
+                Log.d("[dispatcher $uid runOrResumeJob]","正在繼續任務 $filename")
+                job.controlChan.send(true)
+
+            } else {
+                Log.d("[dispatcher $uid runOrResumeJob]","正在新建了任務 $filename")
+                job.started = true
+                this.scope.launch {
+                    imageWorker(job)
+                }
+                job.controlChan.send(true)
+            }
+            Log.d("[dispatcher $uid runOrResumeJob]","已啓動任務 $filename")
+        }
+
+        suspend fun pauseJob(filename: String){
+            /* must run under rLock and sLock */
+            val job: Job = this.runningJobQueue[filename]!!
+            job.controlChan.send(false)
+            this.runningJobQueue.remove(filename)
+            this.stoppedJobQueue[filename] = job
+            Log.d("[dispatcher $uid pauseJob]","停止了任務 $filename")
+
+        }
+
+        suspend fun idleToStopped(){
+            for (job in this.idleJobQueue.values){
+                job.idle = false
+                this.stoppedJobQueue.put(job.filename, job)
+            }
+            Log.d("[dispatcher $uid idleToStopped]","移動了 idle 任務到 stop：${this.idleJobQueue.size}")
+
+            this.idleJobQueue.clear()
+        }
+
+        val priorJobList = mutableListOf<Job>()
+        // todo: 檢查這些 lock！！！
+        iLock.lock()
+        sLock.lock()
+        pLock.lock()
+
+        Log.d("[dispatcher $uid]","started， 最大線程數是 $maxDownloadWorkers")
+        for (filename in priorFilenameList){
+            val job1 = idleJobQueue.get(filename)
+            val job2 = stoppedJobQueue.get(filename)
+            if (job1 != null && job2 != null)
+                throw InvalidObjectException("[dispatcher] ${job1.filename} 同時出現在兩個列表，過於惡俗！！")
+            if (job1 != null) priorJobList.add(job1)
+            if (job2 != null) priorJobList.add(job2)
+        }
+        pLock.unlock()
+        priorJobList.sortBy { it.committedTime }
+        Log.d("[dispatcher $uid]","${priorJobList.size} 個優先 job")
+
+        if (priorJobList.size == 0){
+            sLock.unlock()
+            rLock.lock()
+            Log.d("[dispatcher $uid]","沒有優先任務，一般派送中，，，")
+
+            while (true){
+                if (runningJobQueue.size == maxDownloadWorkers){
+                    rLock.unlock()
+                    iLock.unlock()
+                    Log.d("[dispatcher $uid]","running 數已滿，中止")
+
+                    return
+                }
+                if (idleJobQueue.isEmpty()){
+                    rLock.unlock()
+                    iLock.unlock()
+                    Log.d("[dispatcher $uid]","idle 隊列已空，中止")
+
+                    return
+                }
+                val idleList = this.idleJobQueue.values.toList().sortedBy { it.committedTime }
+                var newJobCount = this.maxDownloadWorkers - this.runningJobQueue.size
+                for (idleJob in idleList){
+                    if (newJobCount == 0) break
+                    runOrResumeJob(idleJob.filename, true)
+                    newJobCount--
+                }
+                Log.d("[dispatcher $uid]","從 idle 隊列中派送了 ${min(idleList.size, newJobCount)} 個")
+
+            }
+
+        }else{
+            rLock.lock()
+            Log.d("[dispatcher $uid]","有插隊任務共 ${priorJobList.size} 個")
+
+            if (priorJobList.size > maxDownloadWorkers){
+                Log.d("[dispatcher $uid]","插隊任務過多，正在暫停所有 running")
+
+                val runningJobFilenames = this.runningJobQueue.keys.toList()
+                for (name in runningJobFilenames){
+                    pauseJob(name)
+                }
+                for (i in 0 until maxDownloadWorkers){
+                    val pendingJob: Job = priorJobList[i]
+                    runOrResumeJob(pendingJob.filename, pendingJob.idle)
+                }
+                idleToStopped()
+                for (i in maxDownloadWorkers until priorJobList.size){
+                    this.idleJobQueue.put(priorJobList[i].filename, priorJobList[i])
+                }
+            }else{
+                if (priorJobList.size > maxDownloadWorkers - this.runningJobQueue.size){
+                    val runningList = this.runningJobQueue.values.toList().sortedBy { it.committedTime }
+                    val needed: Int = priorJobList.size - maxDownloadWorkers + this.runningJobQueue.size
+                    for (i in 0 until needed){
+                        pauseJob(runningList[i].filename)
+                    }
+                    Log.d("[dispatcher $uid]","暫停了 $needed 個執行中任務")
+
+                }
+                for (job in priorJobList){
+                    runOrResumeJob(job.filename, job.idle)
+                }
+            }
+            rLock.unlock()
+            sLock.unlock()
+            iLock.unlock()
+            Log.d("[dispatcher $uid]","插隊任務派送完畢，中止")
+            return
+        }
 
     }
 
@@ -67,7 +209,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         }
     }
 
-    suspend fun onWorkerComplete(job: Job){
+    private suspend fun onWorkerComplete(job: Job){
         Log.i("[onWorkerComplete]", job.filename)
 
         this.rLock.lock()
@@ -79,17 +221,20 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         this.dispatcher()
     }
 
-    fun updatePriorList(filenameList: List<String>){
-        this.priorJobList.clear()
-        this.priorJobList.addAll(filenameList)
+    suspend fun updatePriorList(filenameList: List<String>){
+        pLock.lock()
+        this.priorFilenameList.clear()
+        this.priorFilenameList.addAll(filenameList)
+        pLock.unlock()
+        this.dispatcher()
     }
 
     suspend fun commit(filename: String, url: String): Channel<Int> {
         val newJob = Job(filename, url)
 
-        this.sLock.lock()
-        stoppedJobQueue.put(filename, newJob)
-        this.sLock.unlock()
+        this.iLock.lock()
+        idleJobQueue.put(filename, newJob)
+        this.iLock.unlock()
 
         this.dispatcher()
         return newJob.progressChan
@@ -99,7 +244,15 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         val filename = job.filename
         val url = job.url
         var running = false  //todo
+        val innerChan: Channel<Boolean> = Channel()
 
+        this.scope.launch {
+            for (msg in job.controlChan){
+                running = msg
+                if (msg) innerChan.trySend(true)
+            }
+            innerChan.close()
+        }
         withContext(Dispatchers.IO){
             val file = File(context.cacheDir, filename)
             if (file.exists()){
@@ -107,6 +260,8 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 this@ImageManager.onWorkerComplete(job)
                 return@withContext
             }
+            if (!running) innerChan.receive()
+
             val fullUrl = context.getString(R.string.dori_webroot) + url
             val request = Request.Builder().url(fullUrl)
                 .header("DHT", "!")
@@ -142,30 +297,43 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 //Log.d("[checkImage]", "$filename size is $filesize!!")
             }
 
-            val inBuff = resp.body()?.source()
-            if (inBuff == null){
+            if (!running) innerChan.receive()
+
+            val newFile = File.createTempFile("temp", ".tmp", context.cacheDir) //File(context.cacheDir, filename)
+            val outStream = newFile.outputStream()
+            try {
+                val inBuff = resp.body()?.source()
+                if (inBuff == null){
+                    job.progressChan.send(-1)
+                    this@ImageManager.onWorkerFailed(job)
+                    return@withContext
+                }
+                var total = 0L
+
+                newFile.deleteOnExit()
+                val buff = ByteArray(10000)
+                while (true){
+                    if (!running) innerChan.receive()
+                    val byte = inBuff.read(buff)
+                    if ((byte == -1) or (total == filesize)) {
+                        break
+                    }
+                    //Log.d("[checkImage]", "$filename read $byte data!!")
+                    outStream.write(buff, 0, byte)
+                    total += byte
+                    if (filesize != 0L) {
+                        job.progressChan.send(((total.toFloat()/filesize)*100).toInt())
+                    }
+                }
+            }catch (err: IOException){
+                outStream.flush()
+                outStream.close()
+                resp.close()
                 job.progressChan.send(-1)
                 this@ImageManager.onWorkerFailed(job)
                 return@withContext
             }
-            var total = 0L
 
-            val newFile = File.createTempFile("temp", ".tmp", context.cacheDir) //File(context.cacheDir, filename)
-            val outStream = newFile.outputStream()
-            newFile.deleteOnExit()
-            val buff = ByteArray(10000)
-            while (true){
-                val byte = inBuff.read(buff)
-                if ((byte == -1) or (total == filesize)) {
-                    break
-                }
-                //Log.d("[checkImage]", "$filename read $byte data!!")
-                outStream.write(buff, 0, byte)
-                total += byte
-                if (filesize != 0L) {
-                    job.progressChan.send(((total.toFloat()/filesize)*100).toInt())
-                }
-            }
 
             outStream.flush()
             outStream.close()
@@ -186,7 +354,10 @@ data class Job(
     val url: String,
     val id: Int = Random.nextInt(),
     val progressChan: Channel<Int> = Channel(2),
-    val controlChan: Channel<Boolean> = Channel(2)
+    val controlChan: Channel<Boolean> = Channel(),
+    var started: Boolean = false,
+    val committedTime: Long = System.currentTimeMillis(),
+    var idle: Boolean = true
 )
 
 // DNT: 1
