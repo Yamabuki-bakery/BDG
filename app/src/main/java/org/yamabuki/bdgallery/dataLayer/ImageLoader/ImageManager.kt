@@ -25,28 +25,111 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
     private val priorFilenameList = mutableListOf<String>()
     private val pLock = Mutex()
 
+    private val eventChannel = Channel<EventMessage>()
+
     private val client = OkHttpClient()
 
-    suspend fun dispatcher2(){
-        val toRemove = mutableListOf<String>()
+    init {
+        scope.launch { dispatcher2() }
+    }
 
-        this.sLock.lock()
-        this.rLock.lock()
-        for (record in stoppedJobQueue){
-            val job = record.value
-            this.runningJobQueue.put(record.key, job)
-            toRemove.add(record.key)
-        }
-        for (record in toRemove){
-            stoppedJobQueue.remove(record)
-            val job: Job = this@ImageManager.runningJobQueue.get(record)!!
-            this.scope.launch {
-                imageWorker(job)
+    suspend fun dispatcher2(){
+        var event: EventMessage
+        val dLock = Mutex()
+        while (true){
+            event = this.eventChannel.receive()
+            Log.d("[dispatcher2 EVENT]", event.type.name)
+            when(event.type){
+                EventMessageType.WORKER_COMPLETE -> {
+                    val job = event.job!!
+
+
+                    this.rLock.lock()
+                    runningJobQueue.remove(job.filename)
+                    this.rLock.unlock()
+
+                    job.progressChan.close()//IllegalArgumentException("${job.filename} job 已經完成並退出！！"))
+                    job.controlChan.close()//IllegalArgumentException("${job.filename} job 已經完成並退出！！"))
+                    Log.i("[dispatcher2 onWorkerComplete]", job.filename)
+                }
+                EventMessageType.WORKER_FAILED -> {
+                    val job = event.job!!
+
+
+                    this.rLock.lock()
+                    runningJobQueue.remove(job.filename)
+                    this.rLock.unlock()
+                    Log.w("[dispatcher2 onWorkerFailed]", job.filename)
+                    job.started = false  // need to restart
+
+                    this.scope.launch {
+                        delay(1000)
+
+                        this@ImageManager.sLock.lock()
+                        stoppedJobQueue.put(job.filename, job)
+                        this@ImageManager.sLock.unlock()
+
+                        eventChannel.send(EventMessage(EventMessageType.JUST_RERUN))
+                    }
+                    continue
+                }
+                EventMessageType.WORKER_PAUSED -> {
+                    val job = event.job!!
+
+                    rLock.lock()
+                    sLock.lock()
+                    this.runningJobQueue.remove(job.filename)
+                    this.stoppedJobQueue[job.filename] = job
+                    sLock.unlock()
+                    rLock.unlock()
+                    Log.d("[dispatcher2 pauseJob]","暫停了任務 ${job.filename}")
+                    //continue
+                }
+                EventMessageType.WORKER_RESUMED -> {
+                    val job = event.job!!
+
+                    rLock.lock()
+                    this.runningJobQueue[job.filename] = job
+                    rLock.unlock()
+
+                    Log.d("[dispatcher2 runOrResumeJob]","繼續了任務 ${job.filename}")
+                    continue
+                }
+                EventMessageType.WORKER_STARTED -> {
+                    val job = event.job!!
+
+                    rLock.lock()
+                    this.runningJobQueue[job.filename] = job
+                    rLock.unlock()
+                    Log.d("[dispatcher2 runOrResumeJob]","任務已啓動 ${job.filename}")
+                    continue
+                }
+                EventMessageType.JOB_COMMITED -> {
+                    val job = event.job!!
+
+                    this.iLock.lock()
+                    idleJobQueue.put(job.filename, job)
+                    this.iLock.unlock()
+                    Log.d("[dispatcher2 JOB_COMMITED]", job.filename)
+                }
+                EventMessageType.JOB_PRIORITY_CHANGE -> {
+                    Log.d("[dispatcher2 JOB_PRIORITY_CHANGE]", "JOB_PRIORITY_CHANGE")
+                }
+                EventMessageType.JUST_RERUN -> {
+                    Log.d("[dispatcher2 JUST_RERUN]", "JUST_RERUN")
+                }
             }
-            Log.i("[dispatcher]", record)
+
+            if (dLock.tryLock()){
+                scope.launch {
+                    dispatcher()
+                    Log.v("[dispatcher2 EVENT]", "event ${event.type.name} is finished")
+                    delay(500)
+                    dLock.unlock()
+                }
+            }
+
         }
-        this.rLock.unlock()
-        this.sLock.unlock()
     }
 
     suspend fun dispatcher(){
@@ -60,32 +143,27 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 job.idle = false
             } else {
                 job = this.stoppedJobQueue[filename]!!
-                this.stoppedJobQueue
+                this.stoppedJobQueue.remove(filename)
             }
-            this.runningJobQueue[job.filename] = job
+
             if (job.started) {
-                Log.d("[dispatcher $uid runOrResumeJob]","正在繼續任務 $filename")
                 job.controlChan.send(true)
 
             } else {
-                Log.d("[dispatcher $uid runOrResumeJob]","正在新建了任務 $filename")
+
                 job.started = true
                 this.scope.launch {
                     imageWorker(job)
                 }
                 job.controlChan.send(true)
             }
-            Log.d("[dispatcher $uid runOrResumeJob]","已啓動任務 $filename")
+            //Log.d("[dispatcher $uid runOrResumeJob]","已啓動任務 $filename")
         }
 
         suspend fun pauseJob(filename: String){
             /* must run under rLock and sLock */
             val job: Job = this.runningJobQueue[filename]!!
             job.controlChan.send(false)
-            this.runningJobQueue.remove(filename)
-            this.stoppedJobQueue[filename] = job
-            Log.d("[dispatcher $uid pauseJob]","停止了任務 $filename")
-
         }
 
         suspend fun idleToStopped(){
@@ -104,7 +182,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         sLock.lock()
         pLock.lock()
 
-        Log.d("[dispatcher $uid]","started， 最大線程數是 $maxDownloadWorkers")
+        //Log.d("[dispatcher $uid]","started， 最大線程數是 $maxDownloadWorkers")
         for (filename in priorFilenameList){
             val job1 = idleJobQueue.get(filename)
             val job2 = stoppedJobQueue.get(filename)
@@ -115,7 +193,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         }
         pLock.unlock()
         priorJobList.sortBy { it.committedTime }
-        Log.d("[dispatcher $uid]","${priorJobList.size} 個優先 job")
+        //Log.d("[dispatcher $uid]","${priorJobList.size} 個優先 job")
 
         if (priorJobList.size == 0){
             sLock.unlock()
@@ -144,7 +222,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                     runOrResumeJob(idleJob.filename, true)
                     newJobCount--
                 }
-                Log.d("[dispatcher $uid]","從 idle 隊列中派送了 ${min(idleList.size, newJobCount)} 個")
+                Log.d("[dispatcher $uid]","從 idle 隊列中派送了 ${min(idleList.size, newJobCount)} 個，dispatch 停止")
 
             }
 
@@ -178,47 +256,27 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
 
                 }
                 for (job in priorJobList){
+                    Log.w("[BUGGY resume job]", "${job.filename}, ${job.idle.toString()}")
                     runOrResumeJob(job.filename, job.idle)
                 }
             }
             rLock.unlock()
             sLock.unlock()
             iLock.unlock()
-            Log.d("[dispatcher $uid]","插隊任務派送完畢，中止")
+            Log.d("[dispatcher $uid]","插隊任務派送完畢，dispatch 停止")
             return
         }
 
     }
 
     suspend fun onWorkerFailed(job: Job){
-        Log.e("[onWorkerFailed]", job.filename)
 
-        this.rLock.lock()
-        runningJobQueue.remove(job.filename)
-        this.rLock.unlock()
-
-        this.dispatcher()
-        this.scope.launch {
-            delay(1000)
-
-            this@ImageManager.sLock.lock()
-            stoppedJobQueue.put(job.filename, job)
-            this@ImageManager.sLock.unlock()
-
-            this@ImageManager.dispatcher()
-        }
+        eventChannel.send(EventMessage(EventMessageType.WORKER_FAILED, job))
     }
 
     private suspend fun onWorkerComplete(job: Job){
-        Log.i("[onWorkerComplete]", job.filename)
 
-        this.rLock.lock()
-        runningJobQueue.remove(job.filename)
-        this.rLock.unlock()
-
-        job.progressChan.close()//IllegalArgumentException("${job.filename} job 已經完成並退出！！"))
-        job.controlChan.close()//IllegalArgumentException("${job.filename} job 已經完成並退出！！"))
-        this.dispatcher()
+        this.eventChannel.send(EventMessage(EventMessageType.WORKER_COMPLETE, job))
     }
 
     suspend fun updatePriorList(filenameList: List<String>){
@@ -226,17 +284,27 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         this.priorFilenameList.clear()
         this.priorFilenameList.addAll(filenameList)
         pLock.unlock()
-        this.dispatcher()
+        this.eventChannel.send(EventMessage(EventMessageType.JOB_PRIORITY_CHANGE))
     }
 
     suspend fun commit(filename: String, url: String): Channel<Int> {
         val newJob = Job(filename, url)
 
-        this.iLock.lock()
-        idleJobQueue.put(filename, newJob)
-        this.iLock.unlock()
-
-        this.dispatcher()
+        //this.dispatcher()
+        // check if file existed, if exists, do not give job to dispatcher
+        this.scope.launch {
+            withContext(Dispatchers.IO){
+                val file = File(context.cacheDir, filename)
+                if (file.exists()){
+                    newJob.progressChan.send(101)
+                    Log.d("[commit]", "$filename 緩存命中")
+                    return@withContext
+                }else{
+                    // todo notify dispatcher the job
+                    eventChannel.send(EventMessage(EventMessageType.JOB_COMMITED, newJob))
+                }
+            }
+        }
         return newJob.progressChan
     }
 
@@ -249,18 +317,18 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         this.scope.launch {
             for (msg in job.controlChan){
                 running = msg
-                if (msg) innerChan.trySend(true)
+                if (msg) innerChan.send(true)
             }
             innerChan.close()
         }
         withContext(Dispatchers.IO){
-            val file = File(context.cacheDir, filename)
-            if (file.exists()){
-                job.progressChan.send(101)
-                this@ImageManager.onWorkerComplete(job)
-                return@withContext
+
+            if (!running) {
+                Log.d("[Worker]", "${job.filename} 等待開始運行")
+                innerChan.receive()
             }
-            if (!running) innerChan.receive()
+            eventChannel.send(EventMessage(EventMessageType.WORKER_STARTED, job))
+            Log.d("[Worker]", "${job.filename} 開始運行辣")
 
             val fullUrl = context.getString(R.string.dori_webroot) + url
             val request = Request.Builder().url(fullUrl)
@@ -297,7 +365,13 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 //Log.d("[checkImage]", "$filename size is $filesize!!")
             }
 
-            if (!running) innerChan.receive()
+            if (!running) {
+                eventChannel.send(EventMessage(EventMessageType.WORKER_PAUSED, job))
+                Log.d("[Worker]", "${job.filename} 暫停辣")
+                innerChan.receive()
+                eventChannel.send(EventMessage(EventMessageType.WORKER_RESUMED, job))
+                Log.d("[Worker]", "${job.filename} 繼續辣")
+            }
 
             val newFile = File.createTempFile("temp", ".tmp", context.cacheDir) //File(context.cacheDir, filename)
             val outStream = newFile.outputStream()
@@ -313,7 +387,14 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 newFile.deleteOnExit()
                 val buff = ByteArray(10000)
                 while (true){
-                    if (!running) innerChan.receive()
+                    if (!running) {
+                        eventChannel.send(EventMessage(EventMessageType.WORKER_PAUSED, job))
+                        Log.d("[Worker]", "${job.filename} 暫停辣")
+                        innerChan.receive()
+                        eventChannel.send(EventMessage(EventMessageType.WORKER_RESUMED, job))
+                        Log.d("[Worker]", "${job.filename} 繼續辣")
+                    }
+
                     val byte = inBuff.read(buff)
                     if ((byte == -1) or (total == filesize)) {
                         break
@@ -359,6 +440,29 @@ data class Job(
     val committedTime: Long = System.currentTimeMillis(),
     var idle: Boolean = true
 )
+
+data class EventMessage(
+    val type: EventMessageType,
+    val job: Job? = null,
+)
+
+enum class EventMessageType(val index: Int){
+    WORKER_STARTED(0),
+    WORKER_PAUSED(1),
+    WORKER_RESUMED(2),
+    WORKER_COMPLETE(3),
+    WORKER_FAILED(4),
+    JOB_COMMITED(5),
+    JOB_PRIORITY_CHANGE(6),
+    JUST_RERUN(7),
+
+
+    ;companion object {
+        fun fromIndex(ordinal: Int) : EventMessageType {
+            return values()[ordinal]
+        }
+    }
+}
 
 // DNT: 1
 // Referer: https://bestdori.com/info/cards/1612/Maya-Yamato-So-Music-Is

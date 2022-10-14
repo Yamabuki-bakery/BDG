@@ -89,7 +89,7 @@ fun GalleryScreen(
        snapshotFlow { viewModel.lazyGridState.firstVisibleItemIndex }
            .collect(){
                viewModel.reportOnScreenView()
-               Log.d("[snapshotFlow]", "first visible is $it, and count ${viewModel.lazyGridState.layoutInfo.visibleItemsInfo.size}")
+               //Log.d("[snapshotFlow]", "first visible is $it, and count ${viewModel.lazyGridState.layoutInfo.visibleItemsInfo.size}")
            }
     }
     //val scrollListState = rememberLazyListState()
@@ -262,6 +262,7 @@ private fun LargeImageLazyList(
                         )
                         else -> MyCircularProgressBar(progress =aProgress/100F)
                     }
+                    Text(text = it.id.toString())
                 }
             }
         }
