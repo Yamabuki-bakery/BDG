@@ -33,10 +33,15 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         scope.launch { dispatcher2() }
     }
 
+    @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun dispatcher2(){
         var event: EventMessage
-        val dLock = Mutex()
+
         while (true){
+            /*
+            * 循環接收加載事件，並依此修改各個隊列
+            * 隊列的內容是 dispatcher 的工作判據
+            * */
             event = this.eventChannel.receive()
             Log.d("[dispatcher2 EVENT]", event.type.name)
             when(event.type){
@@ -120,19 +125,20 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 }
             }
 
-            if (dLock.tryLock()){
-                scope.launch {
-                    dispatcher()
-                    Log.v("[dispatcher2 EVENT]", "event ${event.type.name} is finished")
-                    delay(500)
-                    dLock.unlock()
-                }
+            if (eventChannel.isEmpty){
+                /*
+                * 防止混亂，等待所有事件都處理完畢以後才啓動 dispatcher
+                * */
+                Log.d("[dispatcher2 EVENT]", "Channel is empty and run dispatcher now")
+                dispatcher()
+                Log.d("[dispatcher2 EVENT]", "event ${event.type.name} is finished")
+                delay(300)
             }
-
         }
     }
 
-    suspend fun dispatcher(){
+    private suspend fun dispatcher(){
+        // 根據各個隊列的狀態進行調度，優先執行優先任務，暫停暫時不緊急的任務
         val uid = Random.nextInt()
         suspend fun runOrResumeJob(filename: String, fromIdle: Boolean){
             /* must run under rLock and iLock or sLock */
@@ -270,16 +276,15 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
     }
 
     suspend fun onWorkerFailed(job: Job){
-
         eventChannel.send(EventMessage(EventMessageType.WORKER_FAILED, job))
     }
 
     private suspend fun onWorkerComplete(job: Job){
-
         this.eventChannel.send(EventMessage(EventMessageType.WORKER_COMPLETE, job))
     }
 
     suspend fun updatePriorList(filenameList: List<String>){
+        // 外部交代了一個應該優先處理的任務列表
         pLock.lock()
         this.priorFilenameList.clear()
         this.priorFilenameList.addAll(filenameList)
@@ -288,9 +293,9 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
     }
 
     suspend fun commit(filename: String, url: String): Channel<Int> {
+        // 來了一個新任務
         val newJob = Job(filename, url)
 
-        //this.dispatcher()
         // check if file existed, if exists, do not give job to dispatcher
         this.scope.launch {
             withContext(Dispatchers.IO){
@@ -300,7 +305,6 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                     Log.d("[commit]", "$filename 緩存命中")
                     return@withContext
                 }else{
-                    // todo notify dispatcher the job
                     eventChannel.send(EventMessage(EventMessageType.JOB_COMMITED, newJob))
                 }
             }
@@ -308,24 +312,27 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         return newJob.progressChan
     }
 
-    suspend fun imageWorker(job: Job) {
+    private suspend fun imageWorker(job: Job) {
         val filename = job.filename
         val url = job.url
-        var running = false  //todo
-        val innerChan: Channel<Boolean> = Channel()
+
+        // 當這裏被 lock，這個任務就應該暫停
+        val runLock = Mutex(locked = true)
 
         this.scope.launch {
+            // 開一個新線程接收本 worker 是否該暫停的信號
             for (msg in job.controlChan){
-                running = msg
-                if (msg) innerChan.send(true)
+                runLock.tryLock()
+                if (msg) runLock.unlock()
             }
-            innerChan.close()
         }
+
         withContext(Dispatchers.IO){
 
-            if (!running) {
+            if (runLock.isLocked) {
                 Log.d("[Worker]", "${job.filename} 等待開始運行")
-                innerChan.receive()
+                runLock.lock()
+                runLock.unlock()
             }
             eventChannel.send(EventMessage(EventMessageType.WORKER_STARTED, job))
             Log.d("[Worker]", "${job.filename} 開始運行辣")
@@ -365,10 +372,11 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 //Log.d("[checkImage]", "$filename size is $filesize!!")
             }
 
-            if (!running) {
+            if (runLock.isLocked) {
                 eventChannel.send(EventMessage(EventMessageType.WORKER_PAUSED, job))
                 Log.d("[Worker]", "${job.filename} 暫停辣")
-                innerChan.receive()
+                runLock.lock()
+                runLock.unlock()
                 eventChannel.send(EventMessage(EventMessageType.WORKER_RESUMED, job))
                 Log.d("[Worker]", "${job.filename} 繼續辣")
             }
@@ -387,10 +395,11 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 newFile.deleteOnExit()
                 val buff = ByteArray(10000)
                 while (true){
-                    if (!running) {
+                    if (runLock.isLocked) {
                         eventChannel.send(EventMessage(EventMessageType.WORKER_PAUSED, job))
                         Log.d("[Worker]", "${job.filename} 暫停辣")
-                        innerChan.receive()
+                        runLock.lock()
+                        runLock.unlock()
                         eventChannel.send(EventMessage(EventMessageType.WORKER_RESUMED, job))
                         Log.d("[Worker]", "${job.filename} 繼續辣")
                     }
