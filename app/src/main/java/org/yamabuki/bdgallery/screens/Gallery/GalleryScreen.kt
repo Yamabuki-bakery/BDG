@@ -149,6 +149,7 @@ fun GalleryScreen(
  //               updateScrollPos = { a, b -> viewModel.updateScrollPos(a, b, false) },
                 onCardClick = {},
                 modifier = contentModifier,
+                getStateObj = { viewModel.getGridStateObj(it) }
             )
         }
         GalleryAppbar(
@@ -172,6 +173,7 @@ private fun LazyGrid(
     onCardClick: () -> Unit,
   //  updateScrollPos: (Int, Int) -> Unit,
     gridState: LazyGridState,
+    getStateObj: (Card) -> GridUIState,
     modifier: Modifier = Modifier,
     ){
     LazyVerticalGrid(
@@ -185,7 +187,7 @@ private fun LazyGrid(
             key = { it.id },
             contentType = { Card::javaClass }
         ){
-            // todo val stateObj = getStateObj(it)
+            val stateObj: GridUIState = getStateObj(it)
             Card(
                 onClick = { onCardClick() },
                 modifier = Modifier
@@ -196,7 +198,26 @@ private fun LazyGrid(
                     color = getAttrColor(card = it) ,
                     modifier = Modifier.fillMaxSize()
                 ) {
+                    val aProgress by animateIntAsState(
+                        targetValue = stateObj.progress,
+                        animationSpec = tween(75)
+                    )
+                    when (aProgress) {
+                        -1 -> MyCircularProgressBar()
+                        101 -> GlideImage(
+                            imageModel = stateObj.getFile(),
+                            imageOptions = ImageOptions(
+                                contentScale = ContentScale.Fit,
+                                contentDescription = it.title,
 
+                                ),
+                            requestOptions = {
+                                RequestOptions().diskCacheStrategy(DiskCacheStrategy.NONE)
+                            },
+                        )
+                        else -> MyCircularProgressBar(progress =aProgress/100F)
+                    }
+                    Text(text = it.id.toString())
                 }
             }
         }

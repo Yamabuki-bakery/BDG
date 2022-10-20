@@ -36,7 +36,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
     @OptIn(ExperimentalCoroutinesApi::class)
     suspend fun dispatcher2(){
         var event: EventMessage
-
+        val dLock = Mutex()
         while (true){
             /*
             * 循環接收加載事件，並依此修改各個隊列
@@ -59,13 +59,14 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 }
                 EventMessageType.WORKER_FAILED -> {
                     val job = event.job!!
-
-
+                    // todo close old control channel
                     this.rLock.lock()
                     runningJobQueue.remove(job.filename)
                     this.rLock.unlock()
                     Log.w("[dispatcher2 onWorkerFailed]", job.filename)
                     job.started = false  // need to restart
+                    job.controlChan.close()
+                    job.controlChan = Channel()
 
                     this.scope.launch {
                         delay(1000)
@@ -125,15 +126,17 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
                 }
             }
 
-            if (eventChannel.isEmpty){
+           // if (eventChannel.isEmpty){
                 /*
                 * 防止混亂，等待所有事件都處理完畢以後才啓動 dispatcher
                 * */
+                dLock.lock()
                 Log.d("[dispatcher2 EVENT]", "Channel is empty and run dispatcher now")
                 dispatcher()
                 Log.d("[dispatcher2 EVENT]", "event ${event.type.name} is finished")
-                delay(300)
-            }
+           //     delay(300)
+                dLock.unlock()
+           // }
         }
     }
 
@@ -172,7 +175,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
             job.controlChan.send(false)
         }
 
-        suspend fun idleToStopped(){
+        fun idleToStopped(){
             for (job in this.idleJobQueue.values){
                 job.idle = false
                 this.stoppedJobQueue.put(job.filename, job)
@@ -192,8 +195,14 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
         for (filename in priorFilenameList){
             val job1 = idleJobQueue.get(filename)
             val job2 = stoppedJobQueue.get(filename)
-            if (job1 != null && job2 != null)
-                throw InvalidObjectException("[dispatcher] ${job1.filename} 同時出現在兩個列表，過於惡俗！！")
+            if (job1 != null && job2 != null) {
+                Log.e("[dispatcher]", "${job1.id} ${job2.id}")
+                throw InvalidObjectException("[dispatcher] ${filename} 同時出現在兩個列表，過於惡俗！！")
+//                Log.w("[dispatcher]", " ${filename} 同時出現在兩個列表，過於惡俗！！")
+//                stoppedJobQueue.remove(filename)
+//                priorJobList.add(job1)
+//                continue
+            }
             if (job1 != null) priorJobList.add(job1)
             if (job2 != null) priorJobList.add(job2)
         }
@@ -262,7 +271,7 @@ class ImageManager(val context: Context, val scope: CoroutineScope, val maxDownl
 
                 }
                 for (job in priorJobList){
-                    Log.w("[BUGGY resume job]", "${job.filename}, ${job.idle.toString()}")
+                    Log.w("[BUGGY resume job]", "${job.filename}, ${job.idle}")
                     runOrResumeJob(job.filename, job.idle)
                 }
             }
@@ -444,7 +453,7 @@ data class Job(
     val url: String,
     val id: Int = Random.nextInt(),
     val progressChan: Channel<Int> = Channel(2),
-    val controlChan: Channel<Boolean> = Channel(),
+    var controlChan: Channel<Boolean> = Channel(),
     var started: Boolean = false,
     val committedTime: Long = System.currentTimeMillis(),
     var idle: Boolean = true

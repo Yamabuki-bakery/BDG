@@ -31,7 +31,7 @@ data class Card(
     }
     fun getCGFilename (trained: Boolean) : String{
         if ((trained and !imgTrained) or (!trained and !imgNormal))
-            throw IllegalArgumentException("[getCGFilename] 特訓，過於惡俗！")
+            throw IllegalArgumentException("[getCGFilename] 特訓，過於惡俗！card id: ${this.id}")
         val training: String
         if (trained){
             training = "trained"
@@ -42,7 +42,7 @@ data class Card(
     }
     fun getThumbfilename (trained: Boolean) : String{
         if ((trained and !imgTrained) or (!trained and !imgNormal))
-            throw IllegalArgumentException("[getThumbilename] 特訓，過於惡俗！")
+            throw IllegalArgumentException("[getThumbilename] 特訓，過於惡俗！card id: ${this.id}")
         val training: String
         if (trained){
             training = "trained"
